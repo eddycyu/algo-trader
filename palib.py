@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split
 from keras.callbacks import ModelCheckpoint
 
 # create logger
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("algo-trader")
 
 
 def split_train_test_df_by_fixed(df, test_size):

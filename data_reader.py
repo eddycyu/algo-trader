@@ -12,15 +12,15 @@ class DataReader(object):
 
     def __init__(self, name):
         self.name = name
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger("algo-trader")
 
         # check if the data directory exists; if not, make it
         if not os.path.exists(c.DATA_DIR):
             os.makedirs(c.DATA_DIR)
 
     def _load(self, symbol_name, source, start_date, end_date, output_file):
-        pickle_file = os.path.join(
-            c.DATA_DIR, str(start_date) + "_" + str(end_date) + "_" + output_file + "_" + source + ".pkl").lower()
+        pickle_file = os.path.join(c.DATA_DIR, "{start}_{end}_{file}_{source}.pkl".format(
+            start=start_date, end=end_date, file=output_file, source=source).lower())
         try:
             df = pd.read_pickle(pickle_file)
             self.logger.info("Existing file [{file}] found.".format(file=pickle_file))
@@ -31,7 +31,11 @@ class DataReader(object):
             df.to_pickle(pickle_file)
             actual_start = df.head(1).index
             actual_end = df.tail(1).index
-            self.logger.info(symbol_name + " : [" + str(actual_start.date[0]) + "," + str(actual_end.date[0]) + "]")
+            self.logger.info(symbol_name +
+                             " : Requested [{requested_start} ~ {requested_end}]"
+                             " / Actual [{actual_start} ~ {actual_end}]".format(
+                                 requested_start=start_date, requested_end=end_date,
+                                 actual_start=actual_start.date[0], actual_end=actual_end.date[0]))
 
         return df
 

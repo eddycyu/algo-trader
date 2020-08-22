@@ -20,7 +20,7 @@ class PAPlot(object):
 
     def __init__(self, chart_dir=c.CHART_PA_DIR):
         self.chart_dir = chart_dir
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger("algo-trader")
 
         # check if the chart (for predictive analysis) directory exists; if not, make it
         if not os.path.exists(chart_dir):

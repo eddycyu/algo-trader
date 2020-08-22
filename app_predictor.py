@@ -35,10 +35,10 @@ if not os.path.exists(c.LOG_DIR):
     os.makedirs(c.LOG_DIR)
 
 # create logger
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("algo-trader")
 
 # create handlers
-file_handler = logging.FileHandler(os.path.join(c.LOG_DIR, "predictor.log"))
+file_handler = logging.FileHandler(os.path.join(c.LOG_DIR, "algo-trader.log"))
 console_handler = logging.StreamHandler()
 
 # create log formatter

@@ -12,7 +12,7 @@ import math as math
 import statistics as stats
 
 # create logger
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("algo-trader")
 
 
 def copy_column(df, column_source, column_target):
@@ -24,7 +24,6 @@ def copy_column(df, column_source, column_target):
     :param column_target: name of target column in dataframe for copied values
     :return: modified dataframe
     """
-    #df = pd.concat([df, df[column_source].rename(column_target)], axis=1)
     df[column_target] = df[column_source]
     return df
 
@@ -174,12 +173,12 @@ def compute_bb_custom(df, column_source, column_target_bb, time_period, stdev_fa
 
     :param df: dataframe (sorted in ascending time order)
     :param column_source: name of source column with values to compute SMA (e.g. close price)
-    :param column_target_sma: name of target column in dataframe for SMA results
+    :param column_target_bb: name of target column in dataframe for SMA results
     :param time_period: number of days over which to average
     :param stdev_factor: standard deviation scaling factor for upper and lower bands
     :return: modified dataframe
     """
-    # compute SMA
+    # compute BB
     history_values = []
     sma_values = []
     upper_band_values = []
@@ -191,15 +190,15 @@ def compute_bb_custom(df, column_source, column_target_bb, time_period, stdev_fa
         sma = stats.mean(history_values)
         sma_values.append(sma)
 
-        variance = 0 # variance is the square of standard deviation
+        variance = 0  # variance is the square of standard deviation
         for history_value in history_values:
             variance = variance + ((history_value - sma) ** 2)
 
-        stdev = math.sqrt(variance / len(history_values)) # use sqrt to get standard deviation
+        stdev = math.sqrt(variance / len(history_values))  # use sqrt to get standard deviation
         upper_band_values.append(sma + stdev_factor * stdev)
         lower_band_values.append(sma - stdev_factor * stdev)
 
-    # add computed SMA results back to dataframe
+    # add computed BB results back to dataframe
     key_sma = column_target_bb + "-sma-{:d}".format(time_period)
     key_upper_band = column_target_bb + "-upper-{:d}".format(time_period)
     key_lower_band = column_target_bb + "-lower-{:d}".format(time_period)
@@ -216,14 +215,19 @@ def compute_bb(df, column_source, column_target_bb, time_period, stdev_factor=2)
 
     :param df: dataframe (sorted in ascending time order)
     :param column_source: name of source column with values to compute SMA (e.g. close price)
-    :param column_target_sma: name of target column in dataframe for SMA results
+    :param column_target_bb: name of target column in dataframe for SMA results
     :param time_period: number of days over which to average
     :param stdev_factor: standard deviation scaling factor for upper and lower bands
     :return: modified dataframe
     """
-    # compute SMA and add results back to dataframe
-    key_sma = column_target_bb + "-" + str(time_period)
+    # compute BB and add results back to dataframe
+    key_sma = column_target_bb + "-sma-{:d}".format(time_period)
+    key_upper_band = column_target_bb + "-upper-{:d}".format(time_period)
+    key_lower_band = column_target_bb + "-lower-{:d}".format(time_period)
     df[key_sma] = df[column_source].rolling(window=time_period).mean()
+    sma_stdev = df[column_source].rolling(window=time_period).std(ddof=0)
+    df[key_upper_band] = df[key_sma] + (sma_stdev * stdev_factor)
+    df[key_lower_band] = df[key_sma] - (sma_stdev * stdev_factor)
 
     return df
 
