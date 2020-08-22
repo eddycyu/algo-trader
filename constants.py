@@ -1,0 +1,5 @@
+DATA_DIR = "data"
+LOG_DIR = "log"
+CHART_TA_DIR = "chart-technical"
+CHART_PA_DIR = "chart-prediction"
+MODEL_DIR = "model"
