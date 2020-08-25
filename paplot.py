@@ -26,7 +26,7 @@ class PAPlot(object):
         if not os.path.exists(chart_dir):
             os.makedirs(chart_dir)
 
-    def plot_multiple(self, df, *column_sources, symbol_name, xlabel="", ylabel="Price $"):
+    def plot_multiple(self, df, *column_sources, symbol_name, xlabel="", ylabel="Price"):
         # generate chart
         fig = plt.figure(figsize=(16, 10))
         subplot_count = len(column_sources)
@@ -67,39 +67,51 @@ class PAPlot(object):
     def plot_losses(self, network, model_name, symbol_name, look_back, foresight, xlabel="Epoch", ylabel=""):
         # generate chart
         fig, ax = plt.subplots(figsize=(16, 10))
-        ax.set_title("[" + symbol_name + "] - Loss ["
-                     + model_name + "][lb:" + str(look_back) + "][f:" + str(foresight) + "]")
+        ax.set_title("[{symbol}] - Loss [Model: {model_name}][LB: {lb:d}][F: {fs:d}]]".format(
+            symbol=symbol_name, model_name=model_name, lb=look_back, fs=foresight))
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
-        ax.plot(network.history['loss'], label='training loss', zorder=2)
-        ax.plot(network.history['val_loss'], label='validation loss', zorder=2)
+
+        # plot losses
+        loss_min = min(network.history["loss"])
+        val_loss_min = min(network.history["val_loss"])
+        ax.plot(network.history["loss"], label="training loss ({:.4f})".format(loss_min), zorder=2)
+        ax.plot(network.history["val_loss"], label="validation loss ({:.4f})".format(val_loss_min), zorder=2)
         plt.grid(color="lightgray", alpha=0.5, zorder=1)
         plt.legend()
 
         # save chart
         fig.tight_layout()
-        output_file = os.path.join(self.chart_dir, "loss-[" + model_name + "]-[" + symbol_name + "]-["
-                                   + str(look_back) + "-" + str(foresight) + "].png")
+        output_file = os.path.join(self.chart_dir, "loss-[{model_name}]-[{symbol_name}]-[{lb:d}-{fs:d}].png".format(
+            model_name=model_name, symbol_name=symbol_name, lb=look_back, fs=foresight))
         plt.savefig(output_file.lower(), format="png", bbox_inches="tight", transparent=False)
         plt.close(fig)
 
-    def plot_predictions(self, y_pred, y_test, scaler, model_name, symbol_name,
-                         look_back, foresight, xlabel="Date", ylabel="Price $"):
+    def plot_predictions(
+            self, y_pred, y_test, scaler, model_name, symbol_name, look_back, foresight, xlabel="Date", ylabel="Price"):
         # generate chart
         fig, ax = plt.subplots(figsize=(16, 10))
-        ax.set_title("[" + symbol_name + "] - Prediction [model: "
-                     + model_name + "][lb:" + str(look_back) + "][f:" + str(foresight) + "]")
+        ax.set_title("[{symbol}] - Prediction [Model: {model_name}][LB: {lb:d}][F: {fs:d}]]".format(
+            symbol=symbol_name, model_name=model_name, lb=look_back, fs=foresight))
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
-        ax.plot(scaler.inverse_transform(y_pred.reshape(-1, 1)), color="blue", label="Predicted", zorder=2)
-        ax.plot(scaler.inverse_transform(y_test.reshape(-1, 1)), color="green", label="Actual", zorder=2)
+
+        # plot actual vs prediction
+        actual = scaler.inverse_transform(y_test.reshape(-1, 1))
+        predicted = scaler.inverse_transform(y_pred.reshape(-1, 1))
+        last_actual = actual[-1][0]
+        last_predicted = predicted[-1][0]
+        ax.plot(actual, label="Actual ({:.4f})".format(last_actual),
+                color="green", zorder=2)
+        ax.plot(predicted, label="Predicted ({:.4f})".format(last_predicted),
+                color="blue", linestyle="dotted", zorder=2)
         # ax.xaxis.set_major_locator(mdates.MonthLocator())
         plt.grid(color="lightgray", alpha=0.5, zorder=1)
         plt.legend()
 
         # save chart
         fig.tight_layout()
-        output_file = os.path.join(self.chart_dir, "pred-[" + model_name + "]-[" + symbol_name + "]-["
-                                   + str(look_back) + "-" + str(foresight) + "].png")
+        output_file = os.path.join(self.chart_dir, "pred-[{model_name}]-[{symbol_name}]-[{lb:d}-{fs:d}].png".format(
+            model_name=model_name, symbol_name=symbol_name, lb=look_back, fs=foresight))
         plt.savefig(output_file.lower(), format="png", bbox_inches="tight", transparent=False)
         plt.close(fig)

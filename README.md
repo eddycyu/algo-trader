@@ -2,10 +2,10 @@
 
 #### Usage (app_analyzer)
 ```
-# fetch, analyzer and plot charts for default indices and equities
+# fetch, compute and plot charts for default indices and equities
 $ python app_analyzer
 
-# fetch, analyze and plot charts 
+# fetch, compute and plot charts 
 # for indices (^SPX, ^NDQ, ^NDX) and equitites (AAPL, AMZN) 
 # with earliest start date of 1980-01-01 and latest end date of today
 $ python app_analyzer -i ^SPX -i ^NDQ -i ^NDX -i ^DJI -e AAPL -e AMZN --start=1980-01-01

@@ -432,8 +432,9 @@ def compute_daily_change(df, column_source, column_target_daily_change, column_t
     return df
 
 
-def compute_daily_change_between_current_and_previous(df, column_source_current, column_source_previous,
-                                                      column_target_daily_change, column_target_daily_change_pc):
+def compute_daily_change_between_current_and_previous(
+        df, column_source_current, column_source_previous,
+        column_target_daily_change, column_target_daily_change_pc):
     """
     Compute the daily change and daily percentage change between the current and previous values.
 

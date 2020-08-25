@@ -100,6 +100,22 @@ def create_train_test_dataset(df, column_source, look_back=7, foresight=3):
     return np.array(x), np.array(y)
 
 
+def create_train_test_dataset_multiple(df, column_source1, column_source2, look_back=7, foresight=3):
+    x, y = [], []
+    source1_series = df[column_source1]
+    source2_series = df[column_source2]
+    # reshape to a MultiIndex
+    source1_series = source1_series.values.reshape(-1, 1)
+    source2_series = source2_series.values.reshape(-1, 1)
+
+    for i in range(len(df) - look_back - foresight):
+        # append sequence of {look_back} values as features forming an observation
+        x.append(np.append(source1_series[i:(i + look_back), 0], source2_series[i:(i + look_back), 0]))
+        # append value occurring {foresight} time-steps into future
+        y.append(source1_series[i + (look_back + foresight), 0])
+    return np.array(x), np.array(y)
+
+
 def train_network(model_function, x_train, y_train, x_test, y_test, epochs, symbol_name, model_dir):
     # check if the model directory exists; if not, make it
     if not os.path.exists(model_dir):
