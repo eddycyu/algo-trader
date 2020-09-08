@@ -64,7 +64,7 @@ class PAPlot(object):
         plt.savefig(output_file.lower(), format="png", bbox_inches="tight", transparent=False)
         plt.close(fig)
 
-    def plot_losses(self, network, model_name, symbol_name, look_back, foresight, xlabel="Epoch", ylabel=""):
+    def plot_loss(self, network, model_name, symbol_name, look_back, foresight, xlabel="Epoch", ylabel=""):
         # generate chart
         fig, ax = plt.subplots(figsize=(16, 10))
         ax.set_title("[{symbol}] - Loss [Model: {model_name}][LB: {lb:d}][F: {fs:d}]]".format(
@@ -72,11 +72,11 @@ class PAPlot(object):
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
 
-        # plot losses
+        # plot loss
         loss_min = min(network.history["loss"])
         val_loss_min = min(network.history["val_loss"])
-        ax.plot(network.history["loss"], label="training loss ({:.4f})".format(loss_min), zorder=2)
-        ax.plot(network.history["val_loss"], label="validation loss ({:.4f})".format(val_loss_min), zorder=2)
+        ax.plot(network.history["loss"], label="training loss ({:.8f})".format(loss_min), zorder=2)
+        ax.plot(network.history["val_loss"], label="validation loss ({:.8f})".format(val_loss_min), zorder=2)
         plt.grid(color="lightgray", alpha=0.5, zorder=1)
         plt.legend()
 
@@ -87,7 +87,7 @@ class PAPlot(object):
         plt.savefig(output_file.lower(), format="png", bbox_inches="tight", transparent=False)
         plt.close(fig)
 
-    def plot_predictions(
+    def plot_prediction(
             self, y_pred, y_test, scaler, model_name, symbol_name, look_back, foresight, xlabel="Date", ylabel="Price"):
         # generate chart
         fig, ax = plt.subplots(figsize=(16, 10))

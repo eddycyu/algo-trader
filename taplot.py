@@ -78,8 +78,7 @@ class TAPlot(object):
         plt.close(fig)
 
     def plot_ema(
-            self, df, column_close, column_ema_fast, column_ema_slow,
-            column_golden_cross, column_death_cross, column_volume,
+            self, df, column_close, column_ema, column_golden_cross, column_death_cross, column_volume,
             symbol_name, time_period_fast, time_period_slow):
         # generate chart
         fig = plt.figure(figsize=(16, 10))
@@ -92,8 +91,8 @@ class TAPlot(object):
             symbol=symbol_name, fast=time_period_fast, slow=time_period_slow,
             earliest=earliest_date, latest=latest_date))
         ax1.set_ylabel("Price")
-        key_ema_fast = column_ema_fast + "-{:d}".format(time_period_fast)
-        key_ema_slow = column_ema_slow + "-{:d}".format(time_period_slow)
+        key_ema_fast = column_ema + "-{:d}".format(time_period_fast)
+        key_ema_slow = column_ema + "-{:d}".format(time_period_slow)
         last_close = df[column_close].tail(1)[0]
         last_ema_fast = df[key_ema_fast].tail(1)[0]
         last_ema_slow = df[key_ema_slow].tail(1)[0]
@@ -211,8 +210,8 @@ class TAPlot(object):
         plt.close(fig)
 
     def plot_macd(
-            self, df, column_close, column_ema_fast, column_ema_slow,
-            column_macd, column_macd_signal, column_macd_histogram,
+            self, df, column_close,
+            column_ema, column_macd, column_macd_signal, column_macd_histogram,
             symbol_name, time_period_fast, time_period_slow, time_period_macd):
         # generate chart
         fig = plt.figure(figsize=(16, 10))
@@ -227,8 +226,8 @@ class TAPlot(object):
             "[{symbol}] - MACD [Fast: {fast:d}][Slow: {slow:d}][MACD: {macd:d}] - [{earliest} ~ {latest}]".format(
                 symbol=symbol_name, fast=time_period_fast, slow=time_period_slow, macd=time_period_macd,
                 earliest=earliest_date, latest=latest_date))
-        key_ema_fast = column_ema_fast + "-{:d}".format(time_period_fast)
-        key_ema_slow = column_ema_slow + "-{:d}".format(time_period_slow)
+        key_ema_fast = column_ema + "-{:d}".format(time_period_fast)
+        key_ema_slow = column_ema + "-{:d}".format(time_period_slow)
         last_close = df[column_close].tail(1)[0]
         last_ema_fast = df[key_ema_fast].tail(1)[0]
         last_ema_slow = df[key_ema_slow].tail(1)[0]
@@ -340,14 +339,14 @@ class TAPlot(object):
         plt.close(fig)
 
     def plot_bb_macd_rsi(
-            self, df, column_close, column_ema_fast, column_ema_slow,
-            column_bb, column_macd, column_macd_signal, column_rsi,
-            symbol_name, time_period_fast, time_period_slow,
+            self, df, column_close,
+            column_ema, column_sma, column_bb, column_macd, column_macd_signal, column_rsi,
+            symbol_name, time_period_fast, time_period_slow, time_period_sma,
             time_period_bb, stddev_factor, time_period_macd, time_period_rsi):
         # generate chart
         fig = plt.figure(figsize=(16, 10))
 
-        # plot BB with price and EMA
+        # plot BB with price, EMA and SMA
         ax1 = plt.subplot2grid((7, 1), (0, 0), rowspan=4, colspan=1)
         ax1.tick_params(axis="both", which="both", bottom=False, labelbottom=False)
         earliest_date = str(df[column_close].head(1).index.date[0])
@@ -360,11 +359,13 @@ class TAPlot(object):
                 bb=time_period_bb, stdev=stddev_factor, macd=time_period_macd, rsi=time_period_rsi,
                 earliest=earliest_date, latest=latest_date))
         ax1.set_ylabel("Price")
-        key_ema_fast = column_ema_fast + "-{:d}".format(time_period_fast)
-        key_ema_slow = column_ema_slow + "-{:d}".format(time_period_slow)
+        key_ema_fast = column_ema + "-{:d}".format(time_period_fast)
+        key_ema_slow = column_ema + "-{:d}".format(time_period_slow)
+        key_sma = column_sma + "-{:d}".format(time_period_sma)
         last_close = df[column_close].tail(1)[0]
         last_ema_fast = df[key_ema_fast].tail(1)[0]
         last_ema_slow = df[key_ema_slow].tail(1)[0]
+        last_sma = df[key_sma].tail(1)[0]
         df[column_close].plot(
             ax=ax1, label="Close ({:.4f})".format(last_close),
             color="green", legend=True, zorder=4)
@@ -374,24 +375,27 @@ class TAPlot(object):
         df[key_ema_slow].plot(
             ax=ax1, label="EMA-{:d} ({:.4f})".format(time_period_slow, last_ema_slow),
             color="red", legend=True, linestyle="dotted", zorder=2)
+        df[key_sma].plot(
+            ax=ax1, label="SMA-{:d} ({:.4f})".format(time_period_sma, last_sma),
+            color="maroon", legend=True, linestyle="dotted", zorder=2)
 
         # plot BB
-        key_sma = column_bb + "-sma-{:d}".format(time_period_bb)
-        key_upper = column_bb + "-upper-{:d}".format(time_period_bb)
-        key_lower = column_bb + "-lower-{:d}".format(time_period_bb)
-        last_sma = df[key_sma].tail(1)[0]
-        last_upper = df[key_upper].tail(1)[0]
-        last_lower = df[key_lower].tail(1)[0]
-        df[key_sma].plot(
-            ax=ax1, label="SMA-{:d} ({:.4f})".format(time_period_bb, last_sma),
+        key_bb_sma = column_bb + "-sma-{:d}".format(time_period_bb)
+        key_bb_upper = column_bb + "-upper-{:d}".format(time_period_bb)
+        key_bb_lower = column_bb + "-lower-{:d}".format(time_period_bb)
+        last_bb_sma = df[key_bb_sma].tail(1)[0]
+        last_bb_upper = df[key_bb_upper].tail(1)[0]
+        last_bb_lower = df[key_bb_lower].tail(1)[0]
+        df[key_bb_sma].plot(
+            ax=ax1, label="SMA-{:d} ({:.4f})".format(time_period_bb, last_bb_sma),
             color="maroon", legend=True, zorder=3)
-        df[key_upper].plot(
-            ax=ax1, label="Upper-{:d} ({:.4f})".format(time_period_bb, last_upper),
+        df[key_bb_upper].plot(
+            ax=ax1, label="Upper-{:d} ({:.4f})".format(time_period_bb, last_bb_upper),
             color="black", linestyle="dotted", legend=True, zorder=2)
-        df[key_lower].plot(
-            ax=ax1, label="Lower-{:d} ({:.4f})".format(time_period_bb, last_lower),
+        df[key_bb_lower].plot(
+            ax=ax1, label="Lower-{:d} ({:.4f})".format(time_period_bb, last_bb_lower),
             color="black", linestyle="dotted", legend=True, zorder=2)
-        plt.fill_between(df.index, df[key_upper], df[key_lower], color="beige", alpha=0.5)
+        plt.fill_between(df.index, df[key_bb_upper], df[key_bb_lower], color="beige", alpha=0.5)
 
         # plot MACD and signal
         ax2 = plt.subplot2grid((7, 1), (4, 0), rowspan=2, colspan=1)

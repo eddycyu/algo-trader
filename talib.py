@@ -34,7 +34,7 @@ def compute_sma_custom(df, column_source, column_target_sma, time_period):
 
     :param df: dataframe (sorted in ascending time order)
     :param column_source: name of source column with values to compute SMA (e.g. close price)
-    :param column_target_sma: name of target column in dataframe for SMA results
+    :param column_target_sma: prefix of target column in dataframe for SMA results
     :param time_period: number of days over which to average
     :return: modified dataframe
     """
@@ -60,7 +60,7 @@ def compute_sma(df, column_source, column_target_sma, time_period):
 
     :param df: dataframe (sorted in ascending time order)
     :param column_source: name of source column with values to compute SMA (e.g. close price)
-    :param column_target_sma: name of target column in dataframe for SMA results
+    :param column_target_sma: prefix of target column in dataframe for SMA results
     :param time_period: number of days over which to average
     :return: modified dataframe
     """
@@ -72,16 +72,14 @@ def compute_sma(df, column_source, column_target_sma, time_period):
 
 
 def compute_ema_custom(
-        df, column_source, column_target_ema_fast, column_target_ema_slow,
-        column_target_golden_cross, column_target_death_cross,
+        df, column_source, column_target_ema, column_target_golden_cross, column_target_death_cross,
         time_period_fast, time_period_slow):
     """
     Compute Exponential Moving Average (EMA).
 
     :param df: dataframe (sorted in ascending time order)
     :param column_source: name of source column with values to compute EMA (e.g. close price)
-    :param column_target_ema_fast: name of target column in dataframe for fast EMA results
-    :param column_target_ema_slow: name of target column in dataframe for slow EMA results
+    :param column_target_ema: prefix of target column in dataframe for EMA results
     :param column_target_golden_cross: name of target column in dataframe for golden cross results
     :param column_target_death_cross: name of target column in dataframe for death cross results
     :param time_period_fast: number of days over which to average for fast EMA
@@ -106,8 +104,8 @@ def compute_ema_custom(
         ema_slow_values.append(ema_slow)
 
     # add computed EMA results back to dataframe
-    key_ema_fast = column_target_ema_fast + "-{:d}".format(time_period_fast)
-    key_ema_slow = column_target_ema_slow + "-{:d}".format(time_period_slow)
+    key_ema_fast = column_target_ema + "-{:d}".format(time_period_fast)
+    key_ema_slow = column_target_ema + "-{:d}".format(time_period_slow)
     df[key_ema_fast] = ema_fast_values
     df[key_ema_slow] = ema_slow_values
 
@@ -132,16 +130,14 @@ def compute_ema_custom(
 
 
 def compute_ema(
-        df, column_source, column_target_ema_fast, column_target_ema_slow,
-        column_target_golden_cross, column_target_death_cross,
+        df, column_source, column_target_ema, column_target_golden_cross, column_target_death_cross,
         time_period_fast, time_period_slow):
     """
     Compute Exponential Moving Average (EMA).
 
     :param df: dataframe (sorted in ascending time order)
     :param column_source: name of source column with values to compute EMA (e.g. close price)
-    :param column_target_ema_fast: name of target column in dataframe for fast EMA results
-    :param column_target_ema_slow: name of target column in dataframe for slow EMA results
+    :param column_target_ema: prefix of target column in dataframe for EMA results
     :param column_target_golden_cross: name of target column in dataframe for golden cross results
     :param column_target_death_cross: name of target column in dataframe for death cross results
     :param time_period_fast: number of days over which to average for fast EMA
@@ -149,8 +145,8 @@ def compute_ema(
     :return: modified dataframe
     """
     # compute EMA and add results back to dataframe
-    key_ema_fast = column_target_ema_fast + "-{:d}".format(time_period_fast)
-    key_ema_slow = column_target_ema_slow + "-{:d}".format(time_period_slow)
+    key_ema_fast = column_target_ema + "-{:d}".format(time_period_fast)
+    key_ema_slow = column_target_ema + "-{:d}".format(time_period_slow)
     ema_fast_series = df[column_source].ewm(span=time_period_fast, adjust=False).mean()
     ema_slow_series = df[column_source].ewm(span=time_period_slow, adjust=False).mean()
     df[key_ema_fast] = ema_fast_series
@@ -173,7 +169,7 @@ def compute_bb_custom(df, column_source, column_target_bb, time_period, stdev_fa
 
     :param df: dataframe (sorted in ascending time order)
     :param column_source: name of source column with values to compute SMA (e.g. close price)
-    :param column_target_bb: name of target column in dataframe for SMA results
+    :param column_target_bb: prefix of target column in dataframe for BB results
     :param time_period: number of days over which to average
     :param stdev_factor: standard deviation scaling factor for upper and lower bands
     :return: modified dataframe
@@ -215,7 +211,7 @@ def compute_bb(df, column_source, column_target_bb, time_period, stdev_factor=2)
 
     :param df: dataframe (sorted in ascending time order)
     :param column_source: name of source column with values to compute SMA (e.g. close price)
-    :param column_target_bb: name of target column in dataframe for SMA results
+    :param column_target_bb: prefix of target column in dataframe for BB results
     :param time_period: number of days over which to average
     :param stdev_factor: standard deviation scaling factor for upper and lower bands
     :return: modified dataframe
@@ -233,7 +229,7 @@ def compute_bb(df, column_source, column_target_bb, time_period, stdev_factor=2)
 
 
 def compute_macd_custom(
-        df, column_source, column_target_ema_fast, column_target_ema_slow,
+        df, column_source, column_target_ema,
         column_target_macd, column_target_macd_signal, column_target_macd_histogram,
         time_period_fast, time_period_slow, time_period_macd):
     """
@@ -247,8 +243,7 @@ def compute_macd_custom(
 
     :param df: dataframe (sorted in ascending time order)
     :param column_source: name of source column with values to compute MACD (e.g. close price)
-    :param column_target_ema_fast: name of target column in dataframe for fast EMA results
-    :param column_target_ema_slow: name of target column in dataframe for slow EMA results
+    :param column_target_ema: prefix of target column in dataframe for EMA results
     :param column_target_macd: name of target column in dataframe for MACD results
     :param column_target_macd_signal: name of target column in dataframe for MACD signal results
     :param column_target_macd_histogram: name of target column in dataframe for MACD histogram results
@@ -293,8 +288,8 @@ def compute_macd_custom(
     time_fast = str(time_period_fast)
     time_slow = str(time_period_slow)
     time_fast_slow_macd = time_fast + "-" + time_slow + "-" + str(time_period_macd)
-    key_ema_fast = column_target_ema_fast + "-" + time_fast
-    key_ema_slow = column_target_ema_slow + "-" + time_slow
+    key_ema_fast = column_target_ema + "-" + time_fast
+    key_ema_slow = column_target_ema + "-" + time_slow
     key_macd = column_target_macd + "-" + time_fast_slow_macd
     key_macd_signal = column_target_macd_signal + "-" + time_fast_slow_macd
     key_macd_histogram = column_target_macd_histogram + "-" + time_fast_slow_macd
@@ -308,7 +303,7 @@ def compute_macd_custom(
 
 
 def compute_macd(
-        df, column_source, column_target_ema_fast, column_target_ema_slow,
+        df, column_source, column_target_ema,
         column_target_macd, column_target_macd_signal, column_target_macd_histogram,
         time_period_fast, time_period_slow, time_period_macd):
     """
@@ -322,8 +317,7 @@ def compute_macd(
 
     :param df: dataframe (sorted in ascending time order)
     :param column_source: name of source column with values to compute MACD (e.g. close price)
-    :param column_target_ema_fast: name of target column in dataframe for fast EMA results
-    :param column_target_ema_slow: name of target column in dataframe for slow EMA results
+    :param column_target_ema: prefix of target column in dataframe for EMA results
     :param column_target_macd: name of target column in dataframe for MACD results
     :param column_target_macd_signal: name of target column in dataframe for MACD signal results
     :param column_target_macd_histogram: name of target column in dataframe for MACD histogram results
@@ -335,8 +329,8 @@ def compute_macd(
     time_fast = str(time_period_fast)
     time_slow = str(time_period_slow)
     time_fast_slow_macd = time_fast + "-" + time_slow + "-" + str(time_period_macd)
-    key_ema_fast = column_target_ema_fast + "-" + time_fast
-    key_ema_slow = column_target_ema_slow + "-" + time_slow
+    key_ema_fast = column_target_ema + "-" + time_fast
+    key_ema_slow = column_target_ema + "-" + time_slow
     key_macd = column_target_macd + "-" + time_fast_slow_macd
     key_macd_signal = column_target_macd_signal + "-" + time_fast_slow_macd
     key_macd_histogram = column_target_macd_histogram + "-" + time_fast_slow_macd

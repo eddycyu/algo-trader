@@ -34,7 +34,7 @@ file_handler = logging.FileHandler(os.path.join(c.LOG_DIR, "algo-trader.log"))
 console_handler = logging.StreamHandler()
 
 # create log formatter
-log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+log_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 file_handler.setFormatter(log_formatter)
 console_handler.setFormatter(log_formatter)
 
@@ -109,16 +109,16 @@ def compute_all(df):
     df = talib.compute_pc_below(df, c.CLOSE, c.R52_WK_HIGH, c.CLOSE_BELOW_52_WK_HIGH)
     # compute SMA of close price
     df = talib.compute_sma(df, c.CLOSE, c.SMA, 20)
+    df = talib.compute_sma(df, c.CLOSE, c.SMA, 50)
     # compute EMA of close price
-    df = talib.compute_ema(df, c.CLOSE, c.EMA_FAST, c.EMA_SLOW, c.EMA_GOLDEN_CROSS, c.EMA_DEATH_CROSS, 12, 26)  # short
-    df = talib.compute_ema(df, c.CLOSE, c.EMA_FAST, c.EMA_SLOW, c.EMA_GOLDEN_CROSS, c.EMA_DEATH_CROSS, 50, 200)  # long
+    df = talib.compute_ema(df, c.CLOSE, c.EMA, c.EMA_GOLDEN_CROSS, c.EMA_DEATH_CROSS, 12, 26)  # short
+    df = talib.compute_ema(df, c.CLOSE, c.EMA, c.EMA_GOLDEN_CROSS, c.EMA_DEATH_CROSS, 50, 200)  # long
     # compute BB of close price with SMA period of 20 and standard deviation of 2
     df = talib.compute_bb(df, c.CLOSE, c.BB, 20, 2)
     # compute MACD of close price
     df = talib.compute_macd(
         df, c.CLOSE,
-        c.MACD_EMA_FAST, c.MACD_EMA_SLOW,
-        c.MACD, c.MACD_SIGNAL, c.MACD_HISTOGRAM,
+        c.MACD_EMA, c.MACD, c.MACD_SIGNAL, c.MACD_HISTOGRAM,
         12, 26, 9)
     # compute RSI of close price
     df = talib.compute_rsi(df, c.CLOSE, c.RSI_AVG_GAIN, c.RSI_AVG_LOSS, c.RSI, 14)
@@ -135,26 +135,23 @@ def plot_all(symbol_name, df, plotter):
     plotter.plot_pc_above(df.tail(252), c.CLOSE, c.R52_WK_LOW, c.CLOSE_ABOVE_52_WK_LOW, symbol_name)
     plotter.plot_pc_below(df.tail(252), c.CLOSE, c.R52_WK_HIGH, c.CLOSE_BELOW_52_WK_HIGH, symbol_name)
     plotter.plot_sma(df.tail(252), c.CLOSE, c.SMA, c.VOLUME, symbol_name, 20)
+    plotter.plot_sma(df.tail(252), c.CLOSE, c.SMA, c.VOLUME, symbol_name, 50)
     plotter.plot_ema(
-        df.tail(252), c.CLOSE, c.EMA_FAST, c.EMA_SLOW,
-        c.EMA_GOLDEN_CROSS, c.EMA_DEATH_CROSS, c.VOLUME,
+        df.tail(252), c.CLOSE, c.EMA, c.EMA_GOLDEN_CROSS, c.EMA_DEATH_CROSS, c.VOLUME,
         symbol_name, 12, 26)
     plotter.plot_ema(
-        df.tail(252), c.CLOSE, c.EMA_FAST, c.EMA_SLOW,
-        c.EMA_GOLDEN_CROSS, c.EMA_DEATH_CROSS, c.VOLUME,
+        df.tail(252), c.CLOSE, c.EMA, c.EMA_GOLDEN_CROSS, c.EMA_DEATH_CROSS, c.VOLUME,
         symbol_name, 50, 200)
     plotter.plot_bb(df.tail(252), c.CLOSE, c.BB, c.VOLUME, symbol_name, 20, 2)
     plotter.plot_macd(
-        df.tail(120), c.CLOSE,
-        c.MACD_EMA_FAST, c.MACD_EMA_SLOW,
-        c.MACD, c.MACD_SIGNAL, c.MACD_HISTOGRAM,
+        df.tail(252), c.CLOSE,
+        c.MACD_EMA, c.MACD, c.MACD_SIGNAL, c.MACD_HISTOGRAM,
         symbol_name, 12, 26, 9)
-    plotter.plot_rsi(df.tail(120), c.CLOSE, c.RSI_AVG_GAIN, c.RSI_AVG_LOSS, c.RSI, symbol_name, 14)
+    plotter.plot_rsi(df.tail(252), c.CLOSE, c.RSI_AVG_GAIN, c.RSI_AVG_LOSS, c.RSI, symbol_name, 14)
     plotter.plot_bb_macd_rsi(
-        df.tail(120), c.CLOSE,
-        c.MACD_EMA_FAST, c.MACD_EMA_SLOW,
-        c.BB, c.MACD, c.MACD_SIGNAL, c.RSI,
-        symbol_name, 12, 26, 20, 2, 9, 14)
+        df.tail(252), c.CLOSE,
+        c.MACD_EMA, c.SMA, c.BB, c.MACD, c.MACD_SIGNAL, c.RSI,
+        symbol_name, 12, 26, 50, 20, 2, 9, 14)
 
 
 @click.command(help="Run app_analyzer.")
