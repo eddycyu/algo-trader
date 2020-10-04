@@ -195,9 +195,9 @@ def compute_bb_custom(df, column_source, column_target_bb, time_period, stdev_fa
         lower_band_values.append(sma - stdev_factor * stdev)
 
     # add computed BB results back to dataframe
-    key_sma = column_target_bb + "-sma-{:d}".format(time_period)
-    key_upper_band = column_target_bb + "-upper-{:d}".format(time_period)
-    key_lower_band = column_target_bb + "-lower-{:d}".format(time_period)
+    key_sma = column_target_bb + "-sma-{:d}-{:d}".format(time_period, stdev_factor)
+    key_upper_band = column_target_bb + "-upper-{:d}-{:d}".format(time_period, stdev_factor)
+    key_lower_band = column_target_bb + "-lower-{:d}-{:d}".format(time_period, stdev_factor)
     df[key_sma] = sma_values
     df[key_upper_band] = upper_band_values
     df[key_lower_band] = lower_band_values
@@ -217,9 +217,9 @@ def compute_bb(df, column_source, column_target_bb, time_period, stdev_factor=2)
     :return: modified dataframe
     """
     # compute BB and add results back to dataframe
-    key_sma = column_target_bb + "-sma-{:d}".format(time_period)
-    key_upper_band = column_target_bb + "-upper-{:d}".format(time_period)
-    key_lower_band = column_target_bb + "-lower-{:d}".format(time_period)
+    key_sma = column_target_bb + "-sma-{:d}-{:d}".format(time_period, stdev_factor)
+    key_upper_band = column_target_bb + "-upper-{:d}-{:d}".format(time_period, stdev_factor)
+    key_lower_band = column_target_bb + "-lower-{:d}-{:d}".format(time_period, stdev_factor)
     df[key_sma] = df[column_source].rolling(window=time_period).mean()
     sma_stdev = df[column_source].rolling(window=time_period).std(ddof=0)
     df[key_upper_band] = df[key_sma] + (sma_stdev * stdev_factor)

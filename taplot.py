@@ -26,28 +26,30 @@ class TAPlot(object):
         if not os.path.exists(chart_dir):
             os.makedirs(chart_dir)
 
-    def plot_sma(self, df, column_close, column_sma, column_volume, symbol_name, time_period):
+    def plot_sma(self, df, column_close, column_sma, column_volume, symbol_name, time_periods):
         # generate chart
         fig = plt.figure(figsize=(16, 10))
 
-        # plot SMA
+        # plot close and SMA
         ax1 = plt.subplot2grid((4, 1), (0, 0), rowspan=3, colspan=1)
         earliest_date = str(df[column_close].head(1).index.date[0])
         latest_date = str(df[column_close].tail(1).index.date[0])
-        ax1.set_title("[{symbol}] - SMA [Period: {period:d}] - [{earliest} ~ {latest}]".format(
-            symbol=symbol_name, period=time_period, earliest=earliest_date, latest=latest_date))
+        time_periods_string = "-".join(map(str, time_periods))
+        ax1.set_title("[{symbol}] - SMA [Period: {period}] - [{earliest} ~ {latest}]".format(
+            symbol=symbol_name, period=time_periods_string, earliest=earliest_date, latest=latest_date))
         ax1.set_ylabel("Price")
-        key_sma = column_sma + "-{:d}".format(time_period)
         last_close = df[column_close].tail(1)[0]
-        last_sma = df[key_sma].tail(1)[0]
         df[column_close].plot(ax=ax1, label="Close ({:.4f})".format(last_close), color="green", zorder=3)
-        df[key_sma].plot(ax=ax1, label="SMA-{:d} ({:.4f})".format(time_period, last_sma), color="maroon", zorder=2)
-        # testing start
-        # last_date = df[column_close].tail(1).index.date[0]
-        # last_price = df[column_close].tail(1)[0]
-        # last_point = pd.DataFrame({'x': [last_date], 'y': [last_price]})
-        # last_point.plot(ax=ax1, x="x", y="y", style="bD", markersize=10, label="latest price")
-        # testing end
+        for time_period in time_periods:
+            key_sma = column_sma + "-{:d}".format(time_period)
+            last_sma = df[key_sma].tail(1)[0]
+            df[key_sma].plot(ax=ax1, label="SMA-{:d} ({:.4f})".format(time_period, last_sma), ls="dotted", zorder=2)
+            # testing start
+            # last_date = df[column_close].tail(1).index.date[0]
+            # last_price = df[column_close].tail(1)[0]
+            # last_point = pd.DataFrame({'x': [last_date], 'y': [last_price]})
+            # last_point.plot(ax=ax1, x="x", y="y", style="bD", markersize=10, label="latest price")
+            # testing end
         ax1.legend()
 
         # plot volume
@@ -73,7 +75,8 @@ class TAPlot(object):
 
         # save chart
         fig.tight_layout()
-        output_file = os.path.join(self.chart_dir, "sma-[{:d}]-[{symbol}].png".format(time_period, symbol=symbol_name))
+        output_file = os.path.join(self.chart_dir, "sma-[{period}]-[{symbol}].png".format(
+            period=time_periods_string, symbol=symbol_name))
         plt.savefig(output_file.lower(), format="png", bbox_inches="tight", transparent=False)
         plt.close(fig)
 
@@ -160,9 +163,9 @@ class TAPlot(object):
             "[{symbol}] - Bollinger Bands [SMA Period: {period:d}][Stdev: {stdev}] - [{earliest} ~ {latest}]".format(
                 symbol=symbol_name, period=time_period, stdev=stdev_factor, earliest=earliest_date, latest=latest_date))
         ax1.set_ylabel("Price")
-        key_sma = column_bb + "-sma-{:d}".format(time_period)
-        key_upper = column_bb + "-upper-{:d}".format(time_period)
-        key_lower = column_bb + "-lower-{:d}".format(time_period)
+        key_sma = column_bb + "-sma-{:d}-{:d}".format(time_period, stdev_factor)
+        key_upper = column_bb + "-upper-{:d}-{:d}".format(time_period, stdev_factor)
+        key_lower = column_bb + "-lower-{:d}-{:d}".format(time_period, stdev_factor)
         last_close = df[column_close].tail(1)[0]
         last_sma = df[key_sma].tail(1)[0]
         last_upper = df[key_upper].tail(1)[0]
@@ -340,13 +343,13 @@ class TAPlot(object):
 
     def plot_bb_macd_rsi(
             self, df, column_close,
-            column_ema, column_sma, column_bb, column_macd, column_macd_signal, column_rsi,
-            symbol_name, time_period_fast, time_period_slow, time_period_sma,
+            column_ema, column_bb, column_macd, column_macd_signal, column_rsi,
+            symbol_name, time_period_fast, time_period_slow,
             time_period_bb, stddev_factor, time_period_macd, time_period_rsi):
         # generate chart
         fig = plt.figure(figsize=(16, 10))
 
-        # plot BB with price, EMA and SMA
+        # plot BB with price and EMA
         ax1 = plt.subplot2grid((7, 1), (0, 0), rowspan=4, colspan=1)
         ax1.tick_params(axis="both", which="both", bottom=False, labelbottom=False)
         earliest_date = str(df[column_close].head(1).index.date[0])
@@ -361,11 +364,9 @@ class TAPlot(object):
         ax1.set_ylabel("Price")
         key_ema_fast = column_ema + "-{:d}".format(time_period_fast)
         key_ema_slow = column_ema + "-{:d}".format(time_period_slow)
-        key_sma = column_sma + "-{:d}".format(time_period_sma)
         last_close = df[column_close].tail(1)[0]
         last_ema_fast = df[key_ema_fast].tail(1)[0]
         last_ema_slow = df[key_ema_slow].tail(1)[0]
-        last_sma = df[key_sma].tail(1)[0]
         df[column_close].plot(
             ax=ax1, label="Close ({:.4f})".format(last_close),
             color="green", legend=True, zorder=4)
@@ -375,14 +376,11 @@ class TAPlot(object):
         df[key_ema_slow].plot(
             ax=ax1, label="EMA-{:d} ({:.4f})".format(time_period_slow, last_ema_slow),
             color="red", legend=True, linestyle="dotted", zorder=2)
-        df[key_sma].plot(
-            ax=ax1, label="SMA-{:d} ({:.4f})".format(time_period_sma, last_sma),
-            color="maroon", legend=True, linestyle="dotted", zorder=2)
 
         # plot BB
-        key_bb_sma = column_bb + "-sma-{:d}".format(time_period_bb)
-        key_bb_upper = column_bb + "-upper-{:d}".format(time_period_bb)
-        key_bb_lower = column_bb + "-lower-{:d}".format(time_period_bb)
+        key_bb_sma = column_bb + "-sma-{:d}-{:d}".format(time_period_bb, stddev_factor)
+        key_bb_upper = column_bb + "-upper-{:d}-{:d}".format(time_period_bb, stddev_factor)
+        key_bb_lower = column_bb + "-lower-{:d}-{:d}".format(time_period_bb, stddev_factor)
         last_bb_sma = df[key_bb_sma].tail(1)[0]
         last_bb_upper = df[key_bb_upper].tail(1)[0]
         last_bb_lower = df[key_bb_lower].tail(1)[0]
@@ -438,8 +436,9 @@ class TAPlot(object):
 
         # save chart
         fig.tight_layout()
-        output_file = os.path.join(self.chart_dir, "bb-macd-rsi-[{:d}-{:d}-{:d}-{:d}]-[{symbol}].png".format(
-            time_period_fast, time_period_slow, time_period_macd, time_period_rsi, symbol=symbol_name))
+        output_file = os.path.join(self.chart_dir, "bb-macd-rsi-[{:d}-{:d}-{:d}-{:d}-{:d}-{:d}]-[{symbol}].png".format(
+            time_period_fast, time_period_slow, time_period_bb, stddev_factor, time_period_macd, time_period_rsi,
+            symbol=symbol_name))
         plt.savefig(output_file.lower(), format="png", bbox_inches="tight", transparent=False)
         plt.close(fig)
 
