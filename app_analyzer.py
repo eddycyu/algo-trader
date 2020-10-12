@@ -105,6 +105,8 @@ def process_equities(symbols, start_date, end_date):
 
 
 def compute_all(df):
+    # add previous close
+    df = talib.copy_column_shift(df, c.CLOSE, c.PREV_CLOSE, 1)
     # compute daily change and daily percentage change of closing price
     df = talib.compute_daily_change(df, c.CLOSE, c.DAILY_CHG, c.DAILY_CHG_PC)
     # compute daily change between open price and previous closing price

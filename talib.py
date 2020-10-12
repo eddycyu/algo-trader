@@ -28,6 +28,20 @@ def copy_column(df, column_source, column_target):
     return df
 
 
+def copy_column_shift(df, column_source, column_target, shift_amount):
+    """
+    Copy an existing column (shifted by shift_amount) to a new column in dataframe.
+
+    :param df: dataframe (sorted in ascending time order)
+    :param column_source: name of source column with values to copy
+    :param column_target: name of target column in dataframe for copied values
+    :param shift_amount: amount of rows to shift
+    :return: modified dataframe
+    """
+    df[column_target] = df[column_source].shift(shift_amount)
+    return df
+
+
 def compute_sma_custom(df, column_source, column_target_sma, time_period):
     """
     Compute Simple Moving Average (SMA).
