@@ -80,13 +80,132 @@ class TAPlot(object):
         plt.savefig(output_file.lower(), format="png", bbox_inches="tight", transparent=False)
         plt.close(fig)
 
-    def plot_ema(
+    def plot_sma_cross(
+            self, df, column_close, column_sma, column_golden_cross, column_death_cross, column_volume,
+            symbol_name, time_period_fast, time_period_slow):
+        # generate chart
+        fig = plt.figure(figsize=(16, 10))
+
+        # plot SMA pair
+        ax1 = plt.subplot2grid((4, 1), (0, 0), rowspan=3, colspan=1)
+        earliest_date = str(df[column_close].head(1).index.date[0])
+        latest_date = str(df[column_close].tail(1).index.date[0])
+        ax1.set_title("[{symbol}] - SMA [Fast: {fast:d}][Slow: {slow:d}] - [{earliest} ~ {latest}]".format(
+            symbol=symbol_name, fast=time_period_fast, slow=time_period_slow,
+            earliest=earliest_date, latest=latest_date))
+        ax1.set_ylabel("Price")
+        key_sma_fast = column_sma + "-{:d}".format(time_period_fast)
+        key_sma_slow = column_sma + "-{:d}".format(time_period_slow)
+        last_close = df[column_close].tail(1)[0]
+        last_sma_fast = df[key_sma_fast].tail(1)[0]
+        last_sma_slow = df[key_sma_slow].tail(1)[0]
+        df[column_close].plot(
+            ax=ax1, label="Close ({:.4f})".format(last_close),
+            color="green", zorder=3)
+        df[key_sma_fast].plot(
+            ax=ax1, label="SMA-{:d} ({:.4f})".format(time_period_fast, last_sma_fast),
+            color="blue", linestyle="dotted", zorder=2)
+        df[key_sma_slow].plot(
+            ax=ax1, label="SMA-{:d} ({:.4f})".format(time_period_slow, last_sma_slow),
+            color="red", linestyle="dotted", zorder=2)
+
+        # plot crosses
+        key_golden_cross = column_golden_cross + "-{:d}-{:d}".format(time_period_fast, time_period_slow)
+        key_death_cross = column_death_cross + "-{:d}-{:d}".format(time_period_fast, time_period_slow)
+        for i in range(0, len(df)):
+            if df[key_golden_cross].iloc[i]:
+                ax1.axvline(
+                    x=df[key_golden_cross].index.date[i], color="gold", ls="-", lw=2,
+                    label="Golden-X ({})".format(df[key_golden_cross].index.date[i]), zorder=2)
+            if df[key_death_cross].iloc[i]:
+                ax1.axvline(
+                    x=df[key_death_cross].index.date[i], color="magenta", ls="-", lw=2,
+                    label="Death-X ({})".format(df[key_death_cross].index.date[i]), zorder=2)
+        ax1.legend()
+
+        # plot volume
+        ax2 = plt.subplot2grid((4, 1), (3, 0), rowspan=1, colspan=1, sharex=ax1)
+        ax2.tick_params(axis="both", which="both", bottom=False, labelbottom=False)
+        ax2.set_ylabel("Volume")
+        ax2.bar(df[column_volume].index, df[column_volume], color="red", zorder=2)
+
+        # remove x-label
+        ax1.set_xlabel("")
+
+        # set major tick locator
+        ax1.xaxis.set_major_locator(mdates.MonthLocator())
+        ax2.xaxis.set_major_locator(mdates.MonthLocator())
+
+        # set major tick labels with no rotation
+        plt.setp(ax1.xaxis.get_majorticklabels(), rotation=0)
+        plt.setp(ax2.xaxis.get_majorticklabels(), rotation=0)
+
+        # turn on grid
+        ax1.grid(color="lightgray", alpha=0.5, zorder=1)
+        ax2.grid(color="lightgray", alpha=0.5, zorder=1)
+
+        # save chart
+        fig.tight_layout()
+        output_file = os.path.join(self.chart_dir, "sma-cross-[{:d}-{:d}]-[{symbol}].png".format(
+            time_period_fast, time_period_slow, symbol=symbol_name))
+        plt.savefig(output_file.lower(), format="png", bbox_inches="tight", transparent=False)
+        plt.close(fig)
+
+    def plot_ema(self, df, column_close, column_ema, column_volume, symbol_name, time_periods):
+        # generate chart
+        fig = plt.figure(figsize=(16, 10))
+
+        # plot close and EMA
+        ax1 = plt.subplot2grid((4, 1), (0, 0), rowspan=3, colspan=1)
+        earliest_date = str(df[column_close].head(1).index.date[0])
+        latest_date = str(df[column_close].tail(1).index.date[0])
+        time_periods_string = "-".join(map(str, time_periods))
+        ax1.set_title("[{symbol}] - EMA [Period: {period}] - [{earliest} ~ {latest}]".format(
+            symbol=symbol_name, period=time_periods_string, earliest=earliest_date, latest=latest_date))
+        ax1.set_ylabel("Price")
+        last_close = df[column_close].tail(1)[0]
+        df[column_close].plot(ax=ax1, label="Close ({:.4f})".format(last_close), color="green", zorder=3)
+        for time_period in time_periods:
+            key_ema = column_ema + "-{:d}".format(time_period)
+            last_ema = df[key_ema].tail(1)[0]
+            df[key_ema].plot(ax=ax1, label="EMA-{:d} ({:.4f})".format(time_period, last_ema), ls="dotted", zorder=2)
+        ax1.legend()
+
+        # plot volume
+        ax2 = plt.subplot2grid((4, 1), (3, 0), rowspan=1, colspan=1, sharex=ax1)
+        ax2.tick_params(axis="both", which="both", bottom=False, labelbottom=False)
+        ax2.set_ylabel("Volume")
+        ax2.bar(df[column_volume].index, df[column_volume], color="red", zorder=2)
+
+        # remove x-label
+        ax1.set_xlabel("")
+
+        # set major tick locator
+        ax1.xaxis.set_major_locator(mdates.MonthLocator())
+        ax2.xaxis.set_major_locator(mdates.MonthLocator())
+
+        # set major tick labels with no rotation
+        plt.setp(ax1.xaxis.get_majorticklabels(), rotation=0)
+        plt.setp(ax2.xaxis.get_majorticklabels(), rotation=0)
+
+        # turn on grid
+        ax1.grid(color="lightgray", alpha=0.5, zorder=1)
+        ax2.grid(color="lightgray", alpha=0.5, zorder=1)
+
+        # save chart
+        fig.tight_layout()
+        output_file = os.path.join(self.chart_dir, "ema-[{period}]-[{symbol}].png".format(
+            period=time_periods_string, symbol=symbol_name))
+        plt.savefig(output_file.lower(), format="png", bbox_inches="tight", transparent=False)
+        plt.close(fig)
+
+    def plot_ema_cross(
             self, df, column_close, column_ema, column_golden_cross, column_death_cross, column_volume,
             symbol_name, time_period_fast, time_period_slow):
         # generate chart
         fig = plt.figure(figsize=(16, 10))
 
-        # plot EMA
+        # plot EMA pair
         ax1 = plt.subplot2grid((4, 1), (0, 0), rowspan=3, colspan=1)
         earliest_date = str(df[column_close].head(1).index.date[0])
         latest_date = str(df[column_close].tail(1).index.date[0])
@@ -146,8 +265,57 @@ class TAPlot(object):
 
         # save chart
         fig.tight_layout()
-        output_file = os.path.join(self.chart_dir, "ema-[{:d}-{:d}]-[{symbol}].png".format(
+        output_file = os.path.join(self.chart_dir, "ema-cross-[{:d}-{:d}]-[{symbol}].png".format(
             time_period_fast, time_period_slow, symbol=symbol_name))
+        plt.savefig(output_file.lower(), format="png", bbox_inches="tight", transparent=False)
+        plt.close(fig)
+
+    def plot_adtv(self, df, column_close, column_adtv, column_volume, symbol_name, time_periods):
+        # generate chart
+        fig = plt.figure(figsize=(16, 10))
+
+        # plot close
+        ax1 = plt.subplot2grid((4, 1), (0, 0), rowspan=2, colspan=1)
+        earliest_date = str(df[column_close].head(1).index.date[0])
+        latest_date = str(df[column_close].tail(1).index.date[0])
+        time_periods_string = "-".join(map(str, time_periods))
+        ax1.set_title("[{symbol}] - ADTV [Period: {period}] - [{earliest} ~ {latest}]".format(
+            symbol=symbol_name, period=time_periods_string, earliest=earliest_date, latest=latest_date))
+        ax1.set_ylabel("Price")
+        last_close = df[column_close].tail(1)[0]
+        df[column_close].plot(ax=ax1, label="Close ({:.4f})".format(last_close), color="green", zorder=3)
+        ax1.legend()
+
+        # plot volume and ADTV
+        ax2 = plt.subplot2grid((4, 1), (2, 0), rowspan=2, colspan=1, sharex=ax1)
+        ax2.tick_params(axis="both", which="both", bottom=False, labelbottom=False)
+        ax2.set_ylabel("Volume")
+        ax2.bar(df[column_volume].index, df[column_volume], color="red", zorder=2)
+        for time_period in time_periods:
+            key_adtv = column_adtv + "-{:d}".format(time_period)
+            last_adtv = df[key_adtv].tail(1)[0]
+            df[key_adtv].plot(ax=ax2, label="ADTV-{:d} ({:.4f})".format(time_period, last_adtv), ls="dotted", zorder=2)
+        ax2.legend()
+
+        # remove x-label
+        ax1.set_xlabel("")
+
+        # set major tick locator
+        ax1.xaxis.set_major_locator(mdates.MonthLocator())
+        ax2.xaxis.set_major_locator(mdates.MonthLocator())
+
+        # set major tick labels with no rotation
+        plt.setp(ax1.xaxis.get_majorticklabels(), rotation=0)
+        plt.setp(ax2.xaxis.get_majorticklabels(), rotation=0)
+
+        # turn on grid
+        ax1.grid(color="lightgray", alpha=0.5, zorder=1)
+        ax2.grid(color="lightgray", alpha=0.5, zorder=1)
+
+        # save chart
+        fig.tight_layout()
+        output_file = os.path.join(self.chart_dir, "adtv-[{period}]-[{symbol}].png".format(
+            period=time_periods_string, symbol=symbol_name))
         plt.savefig(output_file.lower(), format="png", bbox_inches="tight", transparent=False)
         plt.close(fig)
 

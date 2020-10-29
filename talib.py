@@ -20,7 +20,7 @@ def copy_column(df, column_source, column_target):
     Copy an existing column to a new column in dataframe.
 
     :param df: dataframe (sorted in ascending time order)
-    :param column_source: name of source column with values to copy
+    :param column_source: name of source column in dataframe with values to copy
     :param column_target: name of target column in dataframe for copied values
     :return: modified dataframe
     """
@@ -33,7 +33,7 @@ def copy_column_shift(df, column_source, column_target, shift_amount):
     Copy an existing column (shifted by shift_amount) to a new column in dataframe.
 
     :param df: dataframe (sorted in ascending time order)
-    :param column_source: name of source column with values to copy
+    :param column_source: name of source column in dataframe with values to copy
     :param column_target: name of target column in dataframe for copied values
     :param shift_amount: amount of rows to shift
     :return: modified dataframe
@@ -47,7 +47,7 @@ def compute_sma_custom(df, column_source, column_target_sma, time_period):
     Compute Simple Moving Average (SMA).
 
     :param df: dataframe (sorted in ascending time order)
-    :param column_source: name of source column with values to compute SMA (e.g. close price)
+    :param column_source: name of source column in dataframe with values to compute SMA (e.g. close price)
     :param column_target_sma: prefix of target column in dataframe for SMA results
     :param time_period: number of days over which to average
     :return: modified dataframe
@@ -68,19 +68,20 @@ def compute_sma_custom(df, column_source, column_target_sma, time_period):
     return df
 
 
-def compute_sma(df, column_source, column_target_sma, time_period):
+def compute_sma(df, column_source, column_target_sma, time_periods):
     """
     Compute Simple Moving Average (SMA).
 
     :param df: dataframe (sorted in ascending time order)
-    :param column_source: name of source column with values to compute SMA (e.g. close price)
+    :param column_source: name of source column in dataframe with values to compute SMA (e.g. close price)
     :param column_target_sma: prefix of target column in dataframe for SMA results
-    :param time_period: number of days over which to average
+    :param time_periods: list of time periods (number of days for SMA)
     :return: modified dataframe
     """
-    # compute SMA and add results back to dataframe
-    key_sma = column_target_sma + "-{:d}".format(time_period)
-    df[key_sma] = df[column_source].rolling(window=time_period).mean()
+    # compute SMA for each time period and add results back to dataframe
+    for time_period in time_periods:
+        key_sma = column_target_sma + "-{:d}".format(time_period)
+        df[key_sma] = df[column_source].rolling(window=time_period).mean()
 
     return df
 
@@ -92,7 +93,7 @@ def compute_ema_custom(
     Compute Exponential Moving Average (EMA).
 
     :param df: dataframe (sorted in ascending time order)
-    :param column_source: name of source column with values to compute EMA (e.g. close price)
+    :param column_source: name of source column in dataframe with values to compute EMA (e.g. close price)
     :param column_target_ema: prefix of target column in dataframe for EMA results
     :param column_target_golden_cross: name of target column in dataframe for golden cross results
     :param column_target_death_cross: name of target column in dataframe for death cross results
@@ -143,36 +144,52 @@ def compute_ema_custom(
     return df
 
 
-def compute_ema(
-        df, column_source, column_target_ema, column_target_golden_cross, column_target_death_cross,
-        time_period_fast, time_period_slow):
+def compute_ema(df, column_source, column_target_ema, time_periods):
     """
     Compute Exponential Moving Average (EMA).
 
     :param df: dataframe (sorted in ascending time order)
-    :param column_source: name of source column with values to compute EMA (e.g. close price)
+    :param column_source: name of source column in dataframe with values to compute EMA (e.g. close price)
     :param column_target_ema: prefix of target column in dataframe for EMA results
-    :param column_target_golden_cross: name of target column in dataframe for golden cross results
-    :param column_target_death_cross: name of target column in dataframe for death cross results
-    :param time_period_fast: number of days over which to average for fast EMA
-    :param time_period_slow: number of days over which to average for slow EMA
+    :param time_periods: list of time periods (number of days for EMA)
     :return: modified dataframe
     """
-    # compute EMA and add results back to dataframe
-    key_ema_fast = column_target_ema + "-{:d}".format(time_period_fast)
-    key_ema_slow = column_target_ema + "-{:d}".format(time_period_slow)
-    ema_fast_series = df[column_source].ewm(span=time_period_fast, adjust=False).mean()
-    ema_slow_series = df[column_source].ewm(span=time_period_slow, adjust=False).mean()
-    df[key_ema_fast] = ema_fast_series
-    df[key_ema_slow] = ema_slow_series
+    # compute EMA for each time period and add results back to dataframe
+    for time_period in time_periods:
+        key_ema = column_target_ema + "-{:d}".format(time_period)
+        ema_series = df[column_source].ewm(span=time_period, adjust=False).mean()
+        df[key_ema] = ema_series
+
+    return df
+
+
+def compute_ma_cross(
+        df, column_source, column_target_golden_cross, column_target_death_cross,
+        time_period_fast, time_period_slow):
+    """
+    Compute Moving Average (Golden/Death) Crosses.
+
+    :param df: dataframe (sorted in ascending time order)
+    :param column_source: prefix of source column in dataframe with moving average values
+    :param column_target_golden_cross: name of target column in dataframe for golden cross results
+    :param column_target_death_cross: name of target column in dataframe for death cross results
+    :param time_period_fast: number of days over which to average for fast MA
+    :param time_period_slow: number of days over which to average for slow MA
+    :return: modified dataframe
+    """
+    # get moving average values
+    key_ma_fast = column_source + "-{:d}".format(time_period_fast)
+    key_ma_slow = column_source + "-{:d}".format(time_period_slow)
+    fast_series = df[key_ma_fast]
+    slow_series = df[key_ma_slow]
 
     # compute golden cross / death cross and add results back to dataframe
-    previous_fast_series = df[key_ema_fast].shift(1)
-    previous_slow_series = df[key_ema_slow].shift(1)
+    previous_fast_series = df[key_ma_fast].shift(1)
+    previous_slow_series = df[key_ma_slow].shift(1)
     key_golden_cross = column_target_golden_cross + "-{:d}-{:d}".format(time_period_fast, time_period_slow)
     key_death_cross = column_target_death_cross + "-{:d}-{:d}".format(time_period_fast, time_period_slow)
-    df[key_golden_cross] = (ema_fast_series >= ema_slow_series) & (previous_fast_series <= previous_slow_series)
-    df[key_death_cross] = (ema_fast_series <= ema_slow_series) & (previous_fast_series >= previous_slow_series)
+    df[key_golden_cross] = (fast_series >= slow_series) & (previous_fast_series <= previous_slow_series)
+    df[key_death_cross] = (fast_series <= slow_series) & (previous_fast_series >= previous_slow_series)
 
     return df
 
@@ -182,7 +199,7 @@ def compute_bb_custom(df, column_source, column_target_bb, time_period, stdev_fa
     Compute Bollinger Bands (BB) With Simple Moving Average (SMA).
 
     :param df: dataframe (sorted in ascending time order)
-    :param column_source: name of source column with values to compute SMA (e.g. close price)
+    :param column_source: name of source column in dataframe with values to compute SMA (e.g. close price)
     :param column_target_bb: prefix of target column in dataframe for BB results
     :param time_period: number of days over which to average
     :param stdev_factor: standard deviation scaling factor for upper and lower bands
@@ -224,7 +241,7 @@ def compute_bb(df, column_source, column_target_bb, time_period, stdev_factor=2)
     Compute Bollinger Bands (BB) With Simple Moving Average (SMA).
 
     :param df: dataframe (sorted in ascending time order)
-    :param column_source: name of source column with values to compute SMA (e.g. close price)
+    :param column_source: name of source column in dataframe  with values to compute SMA (e.g. close price)
     :param column_target_bb: prefix of target column in dataframe for BB results
     :param time_period: number of days over which to average
     :param stdev_factor: standard deviation scaling factor for upper and lower bands
@@ -256,7 +273,7 @@ def compute_macd_custom(
     When macd crosses below ema_macd (signal), it indicates a reversal from uptrend to downtrend.
 
     :param df: dataframe (sorted in ascending time order)
-    :param column_source: name of source column with values to compute MACD (e.g. close price)
+    :param column_source: name of source column in dataframe  with values to compute MACD (e.g. close price)
     :param column_target_ema: prefix of target column in dataframe for EMA results
     :param column_target_macd: name of target column in dataframe for MACD results
     :param column_target_macd_signal: name of target column in dataframe for MACD signal results
@@ -330,7 +347,7 @@ def compute_macd(
     When macd crosses below ema_macd (signal), it indicates a reversal from uptrend to downtrend.
 
     :param df: dataframe (sorted in ascending time order)
-    :param column_source: name of source column with values to compute MACD (e.g. close price)
+    :param column_source: name of source column in dataframe  with values to compute MACD (e.g. close price)
     :param column_target_ema: prefix of target column in dataframe for EMA results
     :param column_target_macd: name of target column in dataframe for MACD results
     :param column_target_macd_signal: name of target column in dataframe for MACD signal results
@@ -368,7 +385,7 @@ def compute_rsi(df, column_source, column_target_avg_gain, column_target_avg_los
     RSI values over 50% indicate an uptrend, while values below 50% indicate a downtrend.
 
     :param df: dataframe (sorted in ascending time order)
-    :param column_source: name of source column with values to compute RSI (e.g. close price)
+    :param column_source: name of source column in dataframe  with values to compute RSI (e.g. close price)
     :param column_target_avg_gain: name of target column in dataframe for average gain results
     :param column_target_avg_loss: name of target column in dataframe for average loss results
     :param column_target_rsi: name of target column in dataframe for RSI results
@@ -417,25 +434,33 @@ def compute_rsi(df, column_source, column_target_avg_gain, column_target_avg_los
     return df
 
 
-def compute_daily_change(df, column_source, column_target_daily_change, column_target_daily_change_pc):
+def compute_change(df, column_source, column_target_change, column_target_change_pc, time_periods):
     """
-    Compute the daily change and daily percentage change of the values in the source column.
+    Compute the change and percentage change of the values in the source column for the specified period in days.
 
     :param df: dataframe (sorted in ascending time order)
-    :param column_source: name of source column with values to compute daily change (e.g. close price)
-    :param column_target_daily_change: name of target column for daily change to add to dataframe
-    :param column_target_daily_change_pc: name of target column for daily change pc to add to dataframe
+    :param column_source: name of source column in dataframe with values to compute change (e.g. close price)
+    :param column_target_change: name of target column in dataframe for change to add to dataframe
+    :param column_target_change_pc: name of target column in dataframe for change pc to add to dataframe
+    :param time_periods: list of time periods in days
     :return: modified dataframe
     """
 
-    # NOT CORRECT?
-    daily_change = df[column_source].diff(1)
-    # daily_change_pc = daily_change.pct_change(1)
-    daily_change_pc = df[column_source].pct_change(1)
-
-    # add computed results back to dataframe
-    df = pd.concat([df, daily_change.rename(column_target_daily_change)], axis=1)
-    df = pd.concat([df, daily_change_pc.rename(column_target_daily_change_pc)], axis=1)
+    # compute change over time period and add result back to dataframe
+    for time_period in time_periods:
+        key_change = column_target_change + "-{:d}".format(time_period)
+        key_change_pc = column_target_change_pc + "-{:d}".format(time_period)
+        if time_period == 1:
+            change_series = df[column_source].diff(time_period)
+            change_pc_series = df[column_source].pct_change(time_period)
+            df[key_change] = change_series
+            df[key_change_pc] = change_pc_series
+        else:
+            df2 = df[column_source].asfreq("D", method="ffill")
+            change_series = df2.diff(time_period)
+            change_pc_series = df2.pct_change(time_period)
+            df[key_change] = change_series
+            df[key_change_pc] = change_pc_series
 
     return df
 
@@ -447,10 +472,10 @@ def compute_daily_change_between_current_and_previous(
     Compute the daily change and daily percentage change between the current and previous values.
 
     :param df: dataframe (sorted in ascending time order)
-    :param column_source_current: name of source column with current values to compute (e.g. current open price)
-    :param column_source_previous: name of source column with previous values to compute (e.g. previous close price)
-    :param column_target_daily_change: name of target column for daily change to add to dataframe
-    :param column_target_daily_change_pc: name of target column for daily change pc to add to dataframe
+    :param column_source_current: name of source column in dataframe with current values to compute (e.g. current open price)
+    :param column_source_previous: name of source column in dataframe with previous values to compute (e.g. previous close price)
+    :param column_target_daily_change: name of target column in dataframe for daily change to add to dataframe
+    :param column_target_daily_change_pc: name of target column in dataframe for daily change pc to add to dataframe
     :return: modified dataframe
     """
 
@@ -471,81 +496,59 @@ def compute_52_week_range(df, column_source_low, column_source_high, column_targ
     Compute 52 Week Range (Low~High).
 
     :param df: dataframe (sorted in ascending time order)
-    :param column_source_low: name of source column with low values to compute
-    :param column_source_high: name of source column with high values to compute
-    :param column_target_low: name of target column for low range results to add to dataframe
-    :param column_target_high: name of target column for high range results to add to dataframe
+    :param column_source_low: name of source column in dataframe with low values to compute
+    :param column_source_high: name of source column in dataframe with high values to compute
+    :param column_target_low: name of target column in dataframe for low range results to add to dataframe
+    :param column_target_high: name of target column in dataframe for high range results to add to dataframe
     :return: modified dataframe
     """
 
-    # (for reference) alternative calculation method
-    # symbol_high = symbol_df["High"].asfreq('D').rolling(window=52*7, min_periods=1).max();
-    # symbol_low = symbol_df["Low"].asfreq('D').rolling(window=52*7, min_periods=1).min();
-
-    time_period = 252  # approximate number of trading days in a year
-
-    low_history = []
-    high_history = []
-    low_values = []
-    high_values = []
-    for low_value in df[column_source_low]:
-        low_history.append(low_value)
-        if len(low_history) > time_period:
-            del (low_history[0])
-        low_values.append(min(low_history))
-    for high_value in df[column_source_high]:
-        high_history.append(high_value)
-        if len(high_history) > time_period:
-            del (high_history[0])
-        high_values.append(max(high_history))
-
-    # add computed results back to dataframe
-    df = pd.concat([df, pd.Series(low_values, index=df.index).rename(column_target_low)], axis=1)
-    df = pd.concat([df, pd.Series(high_values, index=df.index).rename(column_target_high)], axis=1)
+    # compute rolling 52 week range and add result back to dataframe
+    df[column_target_low] = df[column_source_low].asfreq("D").rolling(window=52*7, min_periods=1).min();
+    df[column_target_high] = df[column_source_high].asfreq("D").rolling(window=52*7, min_periods=1).max();
 
     return df
 
 
-def compute_pc_above(df, column_source1, column_source2, column_target):
+def compute_change_pc_above(df, column_source1, column_source2, column_target, column_target_pc):
     """
     Compute the percentage of source1 above source2 (e.g. close price above the 52 week low price).
 
     :param df: dataframe (sorted in ascending time order)
-    :param column_source1: name of source1 column with values to compute (e.g. close price)
-    :param column_source2: name of source2 column with values to compute (e.g. 52 week low price)
-    :param column_target: name of target column for results to add to dataframe
+    :param column_source1: name of source1 column in dataframe with values to compute (e.g. close price)
+    :param column_source2: name of source2 column in dataframe with values to compute (e.g. 52 week low price)
+    :param column_target: name of target column in dataframe for change results to add to dataframe
+    :param column_target_pc: name of target column in dataframe for percentage change results to add to dataframe
     :return: modified dataframe
     """
 
-    # symbol_df['u_close_above_52-wk-low'] = (symbol_df['u_close'] / symbol_df['u_52_wk_low']) - 1
-    # return symbol_df
-    # return (close_data / close_52_wk_low_data) - 1
+    change_above = df[column_source1] - df[column_source2]
     pc_above = (df[column_source1] / df[column_source2]) - 1
 
     # add computed results back to dataframe
-    df = pd.concat([df, pc_above.rename(column_target)], axis=1)
+    df = pd.concat([df, change_above.rename(column_target)], axis=1)
+    df = pd.concat([df, pc_above.rename(column_target_pc)], axis=1)
 
     return df
 
 
-def compute_pc_below(df, column_source1, column_source2, column_target):
+def compute_change_pc_below(df, column_source1, column_source2, column_target, column_target_pc):
     """
     Compute the percentage of source1 below source2 (e.g. close price below the 52 week high price).
 
     :param df: dataframe (sorted in ascending time order)
-    :param column_source1: name of source1 column with values to compute (e.g. close price)
-    :param column_source2: name of source2 column with values to compute (e.g. 52 week high price)
-    :param column_target: name of target column for results to add to dataframe
+    :param column_source1: name of source1 column in dataframe with values to compute (e.g. close price)
+    :param column_source2: name of source2 column in dataframe with values to compute (e.g. 52 week high price)
+    :param column_target: name of target column in dataframe for change results to add to dataframe
+    :param column_target_pc: name of target column in dataframe for percentage change results to add to dataframe
     :return: modified dataframe
     """
 
-    # symbol_df['u_close_below_52-wk-high'] = 1 - (symbol_df['u_close'] / symbol_df['u_52_wk_high'])
-    # return symbol_df
-    # return 1 - (close_data / close_52_wk_high_data)
-
+    change_below = df[column_source2] - df[column_source1]
     pc_below = 1 - (df[column_source1] / df[column_source2])
 
     # add computed results back to dataframe
-    df = pd.concat([df, pc_below.rename(column_target)], axis=1)
+    df = pd.concat([df, change_below.rename(column_target)], axis=1)
+    df = pd.concat([df, pc_below.rename(column_target_pc)], axis=1)
 
     return df

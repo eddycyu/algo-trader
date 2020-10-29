@@ -47,7 +47,7 @@ logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
 
-def process_indices(symbols, start_date, end_date):
+def process_indices(symbols, start_date, end_date, db_dir):
     """
     ^SPX = S&P500 = cap-weighted index of the 500 largest U.S. publicly traded companies
     ^TWSE = cap-weighted index of all listed common shares traded on the Taiwan Stock Exchange
@@ -61,6 +61,7 @@ def process_indices(symbols, start_date, end_date):
     :param symbols: list of index symbols to fetch, compute and plot
     :param start_date: earliest date to fetch
     :param end_date: latest date to fetch
+    :param db_dir: directory location to save processed dataframe
     :return:
     """
     data_reader = StooqDataReader()
@@ -74,17 +75,18 @@ def process_indices(symbols, start_date, end_date):
         # compute all technical indicators
         df = compute_all(df)
         # save "processed" dataframe to csv
-        csv_file = os.path.join(c.DB_DIR, symbol_name + ".csv")
+        csv_file = os.path.join(db_dir, symbol_name + ".csv")
         df.to_csv(csv_file, index_label="Date")
         # plot all charts
         plot_all(symbol_name, df, plotter)
 
 
-def process_equities(symbols, start_date, end_date):
+def process_equities(symbols, start_date, end_date, db_dir):
     """
     :param symbols: list of equity symbols to fetch, compute and plot
     :param start_date: earliest date to fetch
     :param end_date: latest date to fetch
+    :param db_dir: directory location to save processed dataframe
     :return:
     """
     data_reader = YahooDataReader()
@@ -98,7 +100,7 @@ def process_equities(symbols, start_date, end_date):
         # compute all technical indicators
         df = compute_all(df)
         # save "processed" dataframe to csv
-        csv_file = os.path.join(c.DB_DIR, symbol_name + ".csv")
+        csv_file = os.path.join(db_dir, symbol_name + ".csv")
         df.to_csv(csv_file, index_label="Date")
         # plot all charts
         plot_all(symbol_name, df, plotter)
@@ -107,25 +109,28 @@ def process_equities(symbols, start_date, end_date):
 def compute_all(df):
     # add previous close
     df = talib.copy_column_shift(df, c.CLOSE, c.PREV_CLOSE, 1)
-    # compute daily change and daily percentage change of closing price
-    df = talib.compute_daily_change(df, c.CLOSE, c.DAILY_CHG, c.DAILY_CHG_PC)
+    # compute change and percentage change of closing price
+    df = talib.compute_change(df, c.CLOSE, c.CHANGE, c.CHANGE_PC, (1, 30, 90, 365))
     # compute daily change between open price and previous closing price
     df = talib.compute_daily_change_between_current_and_previous(
-        df, c.OPEN, c.CLOSE,
-        c.OPEN_PREV_CLOSE, c.OPEN_PREV_CLOSE_PC)
+        df, c.OPEN, c.CLOSE, c.OPEN_PREV_CLOSE, c.OPEN_PREV_CLOSE_PC)
     # compute 52 week range (low~high)
     df = talib.compute_52_week_range(df, c.LOW, c.HIGH, c.R52_WK_LOW, c.R52_WK_HIGH)
-    # compute percentage change of close price above the 52 week low price
-    df = talib.compute_pc_above(df, c.CLOSE, c.R52_WK_LOW, c.CLOSE_ABOVE_52_WK_LOW)
-    # compute percentage change of close price below the 52 week high price
-    df = talib.compute_pc_below(df, c.CLOSE, c.R52_WK_HIGH, c.CLOSE_BELOW_52_WK_HIGH)
+    # compute change and percentage change of close price above the 52 week low price
+    df = talib.compute_change_pc_above(df, c.CLOSE, c.R52_WK_LOW, c.CLOSE_ABOVE_52_WK_LOW, c.CLOSE_ABOVE_52_WK_LOW_PC)
+    # compute change and percentage change of close price below the 52 week high price
+    df = talib.compute_change_pc_below(df, c.CLOSE, c.R52_WK_HIGH, c.CLOSE_BELOW_52_WK_HIGH, c.CLOSE_BELOW_52_WK_HIGH_PC)
     # compute SMA of close price
-    df = talib.compute_sma(df, c.CLOSE, c.SMA, 50)
-    df = talib.compute_sma(df, c.CLOSE, c.SMA, 100)
-    df = talib.compute_sma(df, c.CLOSE, c.SMA, 200)
+    df = talib.compute_sma(df, c.CLOSE, c.SMA, (50, 100, 200))
     # compute EMA of close price
-    df = talib.compute_ema(df, c.CLOSE, c.EMA, c.EMA_GOLDEN_CROSS, c.EMA_DEATH_CROSS, 12, 26)  # short
-    df = talib.compute_ema(df, c.CLOSE, c.EMA, c.EMA_GOLDEN_CROSS, c.EMA_DEATH_CROSS, 50, 200)  # long
+    df = talib.compute_ema(df, c.CLOSE, c.EMA, (12, 26, 50, 200))
+    # compute golden/death crosses for SMA
+    df = talib.compute_ma_cross(df, c.SMA, c.SMA_GOLDEN_CROSS, c.SMA_DEATH_CROSS, 50, 200)
+    # compute golden/death crosses for EMA
+    df = talib.compute_ma_cross(df, c.EMA, c.EMA_GOLDEN_CROSS, c.EMA_DEATH_CROSS, 12, 26)
+    df = talib.compute_ma_cross(df, c.EMA, c.EMA_GOLDEN_CROSS, c.EMA_DEATH_CROSS, 50, 200)
+    # compute average daily trading volume
+    df = talib.compute_sma(df, c.VOLUME, c.ADTV, (30, 90, 180, 365))
     # compute BB of close price with SMA period of 20 and standard deviation of 2
     df = talib.compute_bb(df, c.CLOSE, c.BB, 20, 2)
     # compute MACD of close price
@@ -146,10 +151,14 @@ def plot_all(symbol_name, df, plotter):
     # plotter.plot_pc_above(df.tail(252), c.CLOSE, c.R52_WK_LOW, c.CLOSE_ABOVE_52_WK_LOW, symbol_name)
     # plotter.plot_pc_below(df.tail(252), c.CLOSE, c.R52_WK_HIGH, c.CLOSE_BELOW_52_WK_HIGH, symbol_name)
     plotter.plot_sma(df.tail(252), c.CLOSE, c.SMA, c.VOLUME, symbol_name, (50, 100, 200))
-    plotter.plot_ema(
+    plotter.plot_sma_cross(
+        df.tail(252), c.CLOSE, c.SMA, c.SMA_GOLDEN_CROSS, c.SMA_DEATH_CROSS, c.VOLUME, symbol_name, 50, 200)
+    plotter.plot_ema(df.tail(252), c.CLOSE, c.EMA, c.VOLUME, symbol_name, (12, 26, 50, 200))
+    plotter.plot_ema_cross(
         df.tail(252), c.CLOSE, c.EMA, c.EMA_GOLDEN_CROSS, c.EMA_DEATH_CROSS, c.VOLUME, symbol_name, 12, 26)
-    plotter.plot_ema(
+    plotter.plot_ema_cross(
         df.tail(252), c.CLOSE, c.EMA, c.EMA_GOLDEN_CROSS, c.EMA_DEATH_CROSS, c.VOLUME, symbol_name, 50, 200)
+    plotter.plot_adtv(df.tail(252), c.CLOSE, c.ADTV, c.VOLUME, symbol_name, (30, 90, 180, 365))
     plotter.plot_bb(df.tail(252), c.CLOSE, c.BB, c.VOLUME, symbol_name, 20, 2)
     plotter.plot_macd(df.tail(252), c.CLOSE, c.EMA, c.MACD, c.MACD_SIGNAL, c.MACD_HISTOGRAM, symbol_name, 12, 26, 9)
     plotter.plot_macd(df.tail(252), c.CLOSE, c.EMA, c.MACD, c.MACD_SIGNAL, c.MACD_HISTOGRAM, symbol_name, 50, 200, 9)
@@ -165,12 +174,14 @@ def plot_all(symbol_name, df, plotter):
 @click.option('--equities', '-e', multiple=True, help="Equities to analyze (e.g. SCHB, AMZN, TSLA, etc.)")
 @click.option('--start', multiple=False, help="Use data from start date (YYY-MM-DD). Period will be (start,end].")
 @click.option('--end', multiple=False, help="Use data from end date (YYY-MM-DD). Period will be (start,end].")
-def main(indices, equities, start, end):
+@click.option('--db', multiple=False, help="Location to save processed data.")
+def main(indices, equities, start, end, db):
     # defaults
     symbols_indices = ("^SPX", "^NDQ", "^NDX", "^DJI", "^TWSE", "^KOSPI", "^NKX", "^HSI", "^STI", "^SHC", "^SHBS")
     symbols_equities = ("SCHB", "SCHX", "AMZN", "GOOG", "MSFT", "FB", "AAPL", "NFLX", "TSLA")
     start_date = "1980-01-01"
     end_date = date.today()
+    db_dir = c.DB_DIR
 
     # initialize symbols (indices and equities) from command line
     if indices:
@@ -184,9 +195,13 @@ def main(indices, equities, start, end):
     if end:
         end_date = end
 
+    # initialize db_dir
+    if db:
+        db_dir = db
+
     # process
-    process_indices(symbols_indices, start_date, end_date)
-    process_equities(symbols_equities, start_date, end_date)
+    #process_indices(symbols_indices, start_date, end_date, db_dir)
+    process_equities(symbols_equities, start_date, end_date, db_dir)
 
 
 if __name__ == "__main__":
