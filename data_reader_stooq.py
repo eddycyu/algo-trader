@@ -26,9 +26,11 @@ class StooqDataReader(DataReader):
                 file=pickle_file, symbol=symbol_name))
             df = pdr.StooqDailyReader(symbol_name, start_date, end_date).read()
             df.sort_index(inplace=True)  # stooq returns data in descending order; re-sort into ascending order
-            df.to_pickle(pickle_file)
             actual_start = df.head(1).index
             actual_end = df.tail(1).index
+            actual_pickle_file = os.path.join(c.DATA_DIR, "{start}_{end}_{file}_stooq.pkl".format(
+                start=start_date, end=actual_end.date[0], file=output_file).lower())
+            df.to_pickle(actual_pickle_file)
             self.logger.info(symbol_name +
                              " : Requested [{requested_start} ~ {requested_end}]"
                              " / Actual [{actual_start} ~ {actual_end}]".format(

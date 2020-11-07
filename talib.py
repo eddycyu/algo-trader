@@ -49,7 +49,7 @@ def compute_sma_custom(df, column_source, column_target_sma, time_period):
     :param df: dataframe (sorted in ascending time order)
     :param column_source: name of source column in dataframe with values to compute SMA (e.g. close price)
     :param column_target_sma: prefix of target column in dataframe for SMA results
-    :param time_period: number of days over which to average
+    :param time_period: time period (number of days for SMA)
     :return: modified dataframe
     """
     # compute SMA
@@ -81,7 +81,7 @@ def compute_sma(df, column_source, column_target_sma, time_periods):
     # compute SMA for each time period and add results back to dataframe
     for time_period in time_periods:
         key_sma = column_target_sma + "-{:d}".format(time_period)
-        df[key_sma] = df[column_source].rolling(window=time_period).mean()
+        df[key_sma] = df[column_source].rolling(window=time_period, min_periods=1).mean()
 
     return df
 
@@ -222,8 +222,8 @@ def compute_bb_custom(df, column_source, column_target_bb, time_period, stdev_fa
             variance = variance + ((history_value - sma) ** 2)
 
         stdev = math.sqrt(variance / len(history_values))  # use sqrt to get standard deviation
-        upper_band_values.append(sma + stdev_factor * stdev)
-        lower_band_values.append(sma - stdev_factor * stdev)
+        upper_band_values.append(sma + (stdev_factor * stdev))
+        lower_band_values.append(sma - (stdev_factor * stdev))
 
     # add computed BB results back to dataframe
     key_sma = column_target_bb + "-sma-{:d}-{:d}".format(time_period, stdev_factor)
@@ -251,8 +251,8 @@ def compute_bb(df, column_source, column_target_bb, time_period, stdev_factor=2)
     key_sma = column_target_bb + "-sma-{:d}-{:d}".format(time_period, stdev_factor)
     key_upper_band = column_target_bb + "-upper-{:d}-{:d}".format(time_period, stdev_factor)
     key_lower_band = column_target_bb + "-lower-{:d}-{:d}".format(time_period, stdev_factor)
-    df[key_sma] = df[column_source].rolling(window=time_period).mean()
-    sma_stdev = df[column_source].rolling(window=time_period).std(ddof=0)
+    df[key_sma] = df[column_source].rolling(window=time_period, min_periods=1).mean()
+    sma_stdev = df[column_source].rolling(window=time_period, min_periods=1).std(ddof=0)
     df[key_upper_band] = df[key_sma] + (sma_stdev * stdev_factor)
     df[key_lower_band] = df[key_sma] - (sma_stdev * stdev_factor)
 
@@ -357,11 +357,9 @@ def compute_macd(
     :param time_period_macd: number of days over which to average for MACD EMA
     :return: modified dataframe
     """
-    time_fast = str(time_period_fast)
-    time_slow = str(time_period_slow)
-    time_fast_slow_macd = time_fast + "-" + time_slow + "-" + str(time_period_macd)
-    key_ema_fast = column_target_ema + "-" + time_fast
-    key_ema_slow = column_target_ema + "-" + time_slow
+    time_fast_slow_macd = "{:d}-{:d}-{:d}".format(time_period_fast, time_period_slow, time_period_macd)
+    key_ema_fast = column_target_ema + "-{:d}".format(time_period_fast)
+    key_ema_slow = column_target_ema + "-{:d}".format(time_period_slow)
     key_macd = column_target_macd + "-" + time_fast_slow_macd
     key_macd_signal = column_target_macd_signal + "-" + time_fast_slow_macd
     key_macd_histogram = column_target_macd_histogram + "-" + time_fast_slow_macd
@@ -378,7 +376,7 @@ def compute_macd(
     return df
 
 
-def compute_rsi(df, column_source, column_target_avg_gain, column_target_avg_loss, column_target_rsi, time_period):
+def compute_rsi(df, column_source, column_target_avg_gain, column_target_avg_loss, column_target_rsi, time_periods):
     """
     Compute Relative Strength Indicator (RSI).
 
@@ -389,47 +387,48 @@ def compute_rsi(df, column_source, column_target_avg_gain, column_target_avg_los
     :param column_target_avg_gain: name of target column in dataframe for average gain results
     :param column_target_avg_loss: name of target column in dataframe for average loss results
     :param column_target_rsi: name of target column in dataframe for RSI results
-    :param time_period: number of days over which to look back to compute gains and losses
+    :param time_periods: list ot time periods (in days) over which to look back to compute gains and losses
     :return: modified dataframe
     """
-    gain_history_values = []  # history of gains over look back period (0 if no gain, magnitude of gain if gain)
-    loss_history_values = []  # history of loss over look back period (0 if no loss, magnitude if loss)
-    avg_gain_values = []
-    avg_loss_values = []
-    rsi_values = []
 
-    last_value = 0  # current_value - last_value > 0 ==> gain; current_value - last_value < 0 ==> loss
+    # compute RSI over time period and add results back to dataframe
+    for time_period in time_periods:
+        gain_history_values = []  # history of gains over look back period (0 if no gain, magnitude of gain if gain)
+        loss_history_values = []  # history of loss over look back period (0 if no loss, magnitude if loss)
+        avg_gain_values = []
+        avg_loss_values = []
+        rsi_values = []
+        last_value = 0  # current_value - last_value > 0 ==> gain; current_value - last_value < 0 ==> loss
+        for value in df[column_source]:
+            if last_value == 0:  # first observation
+                last_value = value
 
-    for value in df[column_source]:
-        if last_value == 0:  # first observation
+            # compute average gain and loss
+            gain_history_values.append(max(0, value - last_value))
+            loss_history_values.append(max(0, last_value - value))
             last_value = value
+            if len(gain_history_values) > time_period:  # maximum observations is equal to look back period
+                del (gain_history_values[0])
+                del (loss_history_values[0])
+            avg_gain = stats.mean(gain_history_values)  # average gain over look back period
+            avg_loss = stats.mean(loss_history_values)  # average loss over look back period
+            avg_gain_values.append(avg_gain)
+            avg_loss_values.append(avg_loss)
 
-        # compute average gain and loss
-        gain_history_values.append(max(0, value - last_value))
-        loss_history_values.append(max(0, last_value - value))
-        last_value = value
-        if len(gain_history_values) > time_period:  # maximum observations is equal to look back period
-            del (gain_history_values[0])
-            del (loss_history_values[0])
-        avg_gain = stats.mean(gain_history_values)  # average gain over look back period
-        avg_loss = stats.mean(loss_history_values)  # average loss over look back period
-        avg_gain_values.append(avg_gain)
-        avg_loss_values.append(avg_loss)
+            # compute RS and RSI
+            rs = 0
+            if avg_loss > 0:  # to avoid division by 0
+                rs = avg_gain / avg_loss
+            rsi = 100 - (100 / (1 + rs))
+            rsi_values.append(rsi)
 
-        # compute RSI
-        rs = 0
-        if avg_loss > 0:  # to avoid division by 0
-            rs = avg_gain / avg_loss
-        rsi = 100 - (100 / (1 + rs))
-        rsi_values.append(rsi)
-
-    # add computed results back to dataframe
-    key_avg_gain = column_target_avg_gain + "-" + str(time_period)
-    key_avg_loss = column_target_avg_loss + "-" + str(time_period)
-    key_rsi = column_target_rsi + "-" + str(time_period)
-    df[key_avg_gain] = avg_gain_values
-    df[key_avg_loss] = avg_loss_values
-    df[key_rsi] = rsi_values
+        # add computed results back to dataframe
+        key_avg_gain = column_target_avg_gain + "-{:d}".format(time_period)
+        key_avg_loss = column_target_avg_loss + "-{:d}".format(time_period)
+        key_rsi = column_target_rsi + "-{:d}".format(time_period)
+        df[key_avg_gain] = avg_gain_values
+        df[key_avg_loss] = avg_loss_values
+        df[key_rsi] = rsi_values
 
     return df
 

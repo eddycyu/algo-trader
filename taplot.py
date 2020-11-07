@@ -469,11 +469,11 @@ class TAPlot(object):
         df[column_close].plot(ax=ax1, label="Close ({:.4f})".format(last_close), color="green", legend=True, zorder=2)
 
         # plot average gain and loss
-        ax2 = fig.add_subplot(312, ylabel="RS")
+        ax2 = fig.add_subplot(312, ylabel="Avg Gain / Loss")
         key_avg_gain = column_avg_gain + "-{:d}".format(time_period)
         key_avg_loss = column_avg_loss + "-{:d}".format(time_period)
-        df[key_avg_gain].plot(ax=ax2, label="Gain", color="green", legend=True, zorder=2)
-        df[key_avg_loss].plot(ax=ax2, label="Loss", color="red", legend=True, zorder=2)
+        df[key_avg_gain].plot(ax=ax2, label="Avg Gain", color="green", legend=True, zorder=2)
+        df[key_avg_loss].plot(ax=ax2, label="Avg Loss", color="red", legend=True, zorder=2)
 
         # plot RSI
         ax3 = fig.add_subplot(313, ylabel="RSI")

@@ -47,7 +47,7 @@ logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
 
-def process_indices(symbols, start_date, end_date, db_dir):
+def process_indices(symbols, start_date, end_date, db_dir, plot):
     """
     ^SPX = S&P500 = cap-weighted index of the 500 largest U.S. publicly traded companies
     ^TWSE = cap-weighted index of all listed common shares traded on the Taiwan Stock Exchange
@@ -62,6 +62,7 @@ def process_indices(symbols, start_date, end_date, db_dir):
     :param start_date: earliest date to fetch
     :param end_date: latest date to fetch
     :param db_dir: directory location to save processed dataframe
+    :param plot: true = do plot, false = skip plot
     :return:
     """
     data_reader = StooqDataReader()
@@ -78,15 +79,17 @@ def process_indices(symbols, start_date, end_date, db_dir):
         csv_file = os.path.join(db_dir, symbol_name + ".csv")
         df.to_csv(csv_file, index_label="Date")
         # plot all charts
-        plot_all(symbol_name, df, plotter)
+        if plot:
+            plot_all(symbol_name, df, plotter)
 
 
-def process_equities(symbols, start_date, end_date, db_dir):
+def process_equities(symbols, start_date, end_date, db_dir, plot):
     """
     :param symbols: list of equity symbols to fetch, compute and plot
     :param start_date: earliest date to fetch
     :param end_date: latest date to fetch
     :param db_dir: directory location to save processed dataframe
+    :param plot: true = do plot, false = skip plot
     :return:
     """
     data_reader = YahooDataReader()
@@ -103,7 +106,8 @@ def process_equities(symbols, start_date, end_date, db_dir):
         csv_file = os.path.join(db_dir, symbol_name + ".csv")
         df.to_csv(csv_file, index_label="Date")
         # plot all charts
-        plot_all(symbol_name, df, plotter)
+        if plot:
+            plot_all(symbol_name, df, plotter)
 
 
 def compute_all(df):
@@ -135,9 +139,8 @@ def compute_all(df):
     df = talib.compute_bb(df, c.CLOSE, c.BB, 20, 2)
     # compute MACD of close price
     df = talib.compute_macd(df, c.CLOSE, c.EMA, c.MACD, c.MACD_SIGNAL, c.MACD_HISTOGRAM, 12, 26, 9)
-    df = talib.compute_macd(df, c.CLOSE, c.EMA, c.MACD, c.MACD_SIGNAL, c.MACD_HISTOGRAM, 50, 200, 9)
     # compute RSI of close price
-    df = talib.compute_rsi(df, c.CLOSE, c.RSI_AVG_GAIN, c.RSI_AVG_LOSS, c.RSI, 14)
+    df = talib.compute_rsi(df, c.CLOSE, c.RSI_AVG_GAIN, c.RSI_AVG_LOSS, c.RSI, (7, 14, 21))
 
     return df
 
@@ -161,33 +164,47 @@ def plot_all(symbol_name, df, plotter):
     plotter.plot_adtv(df.tail(252), c.CLOSE, c.ADTV, c.VOLUME, symbol_name, (30, 90, 180, 365))
     plotter.plot_bb(df.tail(252), c.CLOSE, c.BB, c.VOLUME, symbol_name, 20, 2)
     plotter.plot_macd(df.tail(252), c.CLOSE, c.EMA, c.MACD, c.MACD_SIGNAL, c.MACD_HISTOGRAM, symbol_name, 12, 26, 9)
-    plotter.plot_macd(df.tail(252), c.CLOSE, c.EMA, c.MACD, c.MACD_SIGNAL, c.MACD_HISTOGRAM, symbol_name, 50, 200, 9)
+    plotter.plot_rsi(df.tail(252), c.CLOSE, c.RSI_AVG_GAIN, c.RSI_AVG_LOSS, c.RSI, symbol_name, 7)
     plotter.plot_rsi(df.tail(252), c.CLOSE, c.RSI_AVG_GAIN, c.RSI_AVG_LOSS, c.RSI, symbol_name, 14)
+    plotter.plot_rsi(df.tail(252), c.CLOSE, c.RSI_AVG_GAIN, c.RSI_AVG_LOSS, c.RSI, symbol_name, 21)
+    plotter.plot_bb_macd_rsi(
+        df.tail(252), c.CLOSE, c.EMA, c.BB, c.MACD, c.MACD_SIGNAL, c.RSI, symbol_name, 12, 26, 20, 2, 9, 7)
     plotter.plot_bb_macd_rsi(
         df.tail(252), c.CLOSE, c.EMA, c.BB, c.MACD, c.MACD_SIGNAL, c.RSI, symbol_name, 12, 26, 20, 2, 9, 14)
     plotter.plot_bb_macd_rsi(
-        df.tail(252), c.CLOSE, c.EMA, c.BB, c.MACD, c.MACD_SIGNAL, c.RSI, symbol_name, 50, 200, 20, 2, 9, 14)
+        df.tail(252), c.CLOSE, c.EMA, c.BB, c.MACD, c.MACD_SIGNAL, c.RSI, symbol_name, 12, 26, 20, 2, 9, 21)
 
 
 @click.command(help="Run app_analyzer.")
-@click.option('--indices', '-i', multiple=True, help="Indices to analyze (e.g. ^SPX, ^TWSE, ^KOSPI, etc.)")
-@click.option('--equities', '-e', multiple=True, help="Equities to analyze (e.g. SCHB, AMZN, TSLA, etc.)")
+@click.option('--indices', '-i', multiple=True, help="Indices to analyze (e.g. ^SPX, ^DJI, ^TWSE, ^KOSPI, etc.)")
+@click.option('--stocks', '-s', multiple=True, help="Stocks to analyze (e.g. AAPL, AMZN, GOOGL, TSLA, etc.)")
+@click.option('--etfs', '-e', multiple=True, help="ETFs to analyze (e.g. SCHB, SCHX, VTI, VOO, etc.)")
 @click.option('--start', multiple=False, help="Use data from start date (YYY-MM-DD). Period will be (start,end].")
 @click.option('--end', multiple=False, help="Use data from end date (YYY-MM-DD). Period will be (start,end].")
-@click.option('--db', multiple=False, help="Location to save processed data.")
-def main(indices, equities, start, end, db):
+@click.option('--dbi', multiple=False, help="Location to save processed index data.")
+@click.option('--dbs', multiple=False, help="Location to save processed stock data.")
+@click.option('--dbe', multiple=False, help="Location to save processed ETF data.")
+@click.option('--plot/--no-plot', multiple=False, help="--plot = do plot, --no-plot = skip plot", default=True)
+def main(indices, stocks, etfs, start, end, dbi, dbs, dbe, plot):
     # defaults
     symbols_indices = ("^SPX", "^NDQ", "^NDX", "^DJI", "^TWSE", "^KOSPI", "^NKX", "^HSI", "^STI", "^SHC", "^SHBS")
-    symbols_equities = ("SCHB", "SCHX", "AMZN", "GOOG", "MSFT", "FB", "AAPL", "NFLX", "TSLA")
+    symbols_stocks = ("AAPL", "AMZN", "FB", "GOOGL", "GOOG", "MSFT", "NFLX", "TSLA", "CRM", "WDAY",
+                      "BABA", "TCTZF", "NIO", "NOW", "SNOW", "PLTR")
+    symbols_etfs = ("SCHB", "SCHX", "SCHG", "SCHA", "SCHF", "SCHE", "SCHD", "SCHH", "SCHZ",
+                    "VTI", "VOO", "VTV", "VEA", "VWO", "QQQ", "SPY", "GLD", "IWF", "AGG")
     start_date = "1980-01-01"
     end_date = date.today()
-    db_dir = c.DB_DIR
+    dbi_dir = c.DB_DIR
+    dbs_dir = c.DB_DIR
+    dbe_dir = c.DB_DIR
 
-    # initialize symbols (indices and equities) from command line
+    # initialize symbols (indices, stocks and ETFs) from command line
     if indices:
         symbols_indices = indices
-    if equities:
-        symbols_equities = equities
+    if stocks:
+        symbols_stocks = stocks
+    if etfs:
+        symbols_etfs = etfs
 
     # initialize start (inclusive) and end (inclusive) date range from command line
     if start:
@@ -195,13 +212,22 @@ def main(indices, equities, start, end, db):
     if end:
         end_date = end
 
-    # initialize db_dir
-    if db:
-        db_dir = db
+    # initialize dbi_dir (for indices)
+    if dbi:
+        dbi_dir = dbi
+
+    # initialize dbs_dir (for stocks)
+    if dbs:
+        dbs_dir = dbs
+
+    # initialize dbe_dir (for ETFs)
+    if dbe:
+        dbe_dir = dbe
 
     # process
-    #process_indices(symbols_indices, start_date, end_date, db_dir)
-    process_equities(symbols_equities, start_date, end_date, db_dir)
+    process_indices(symbols_indices, start_date, end_date, dbi_dir, plot)
+    process_equities(symbols_stocks, start_date, end_date, dbs_dir, plot)
+    process_equities(symbols_etfs, start_date, end_date, dbe_dir, plot)
 
 
 if __name__ == "__main__":

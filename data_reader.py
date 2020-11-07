@@ -28,9 +28,11 @@ class DataReader(object):
             self.logger.info("File [{file}] not found... downloading [{symbol}] from [{source}].".format(
                 file=pickle_file, symbol=symbol_name, source=source))
             df = pdr.DataReader(symbol_name, source, start_date, end_date)
-            df.to_pickle(pickle_file)
             actual_start = df.head(1).index
             actual_end = df.tail(1).index
+            actual_pickle_file = os.path.join(c.DATA_DIR, "{start}_{end}_{file}_{source}.pkl".format(
+                start=start_date, end=actual_end.date[0], file=output_file, source=source).lower())
+            df.to_pickle(actual_pickle_file)
             self.logger.info(symbol_name +
                              " : Requested [{requested_start} ~ {requested_end}]"
                              " / Actual [{actual_start} ~ {actual_end}]".format(
