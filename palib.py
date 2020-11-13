@@ -149,8 +149,9 @@ def train_network(model_function, x_train, y_train, x_val, y_val, outputs, epoch
     samples = x_train.shape[0]
     steps = x_train.shape[1]
     features = x_train.shape[2]
-    scaling_factor = 6  # smaller value = more hidden nodes; larger value = less hidden nodes
+    scaling_factor = 3  # smaller value = more hidden nodes; larger value = less hidden nodes
     hidden_nodes = compute_hidden_nodes(steps, outputs, samples, scaling_factor)
+    logger.info("Hidden Nodes: {:d}".format(hidden_nodes))
     model = model_function(hidden_nodes, steps, features)
     network = model.fit(x_train, y_train,
                         validation_data=(x_val, y_val),
