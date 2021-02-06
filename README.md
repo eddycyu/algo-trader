@@ -1,20 +1,26 @@
 # algo-trader
 
-#### Usage (app_analyzer)
+#### Usage (app_train)
 ```
-# fetch, compute and plot charts for default indices and equities
-$ python app_analyzer
+# fetch data, compute technical analysis, train network, output generate models to directory (model.yyyy-mm-dd)
 
-# fetch, compute and plot charts 
-# for indices (^SPX, ^NDQ, ^NDX) and equitites (AAPL, AMZN) 
+$ python app_predictor --model=model.yyyy-mm-dd
+```
+
+
+#### Usage (app_predict)
+```
+# fetch data, compute technical analysis, plot technical analysis charts, 
+# predict using models in directory (model.yyyy-mm-dd), and output processed data
+$ python app_predict --model=model.yyyy-mm-dd
+
+# fetch data, compute technical analysis, skip plotting of technical analysis charts, 
+# predict using models in directory (model.yyyy-mm-dd), and output processed data
+# for indices (^SPX, ^NDQ, ^NDX), stocks (AAPL, AMZN) and ETFs (SCHB, SCHX) 
 # with earliest start date of 1980-01-01 and latest end date of today
-$ python app_analyzer -i ^SPX -i ^NDQ -i ^NDX -i ^DJI -e AAPL -e AMZN --start=1980-01-01
+$ python app_predict --no-plot --model=model.yyyy-mm-dd -i ^SPX -i ^NDQ -i ^NDX -i ^DJI -s AAPL -s AMZN -e SCHB -e SCHX --start=1980-01-01
 ```
 
-#### Usage (app_predictor)
-```
-$ python app_predictor
-```
 
 #### Directories
 By default, the following directories are created:
@@ -22,4 +28,5 @@ By default, the following directories are created:
 * chart-technical - location to store generated technical analysis charts
 * chart-prediction - location to store generated predictive analysis charts
 * model - location to store generated models
+* db - location to store processed data
 * log - location to store log files

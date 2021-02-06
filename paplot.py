@@ -18,7 +18,7 @@ class PAPlot(object):
     Class for PA plots.
     """
 
-    def __init__(self, chart_dir=c.CHART_PA_DIR):
+    def __init__(self, chart_dir):
         self.chart_dir = chart_dir
         self.logger = logging.getLogger("algo-trader")
 
@@ -64,54 +64,80 @@ class PAPlot(object):
         plt.savefig(output_file.lower(), format="png", bbox_inches="tight", transparent=False)
         plt.close(fig)
 
-    def plot_loss(self, network, model_name, symbol_name, look_back, foresight, xlabel="Epoch", ylabel=""):
+    def plot_loss(self, history, network_name, symbol_name, feature, look_back, look_front, xlabel="Epoch", ylabel=""):
         # generate chart
         fig, ax = plt.subplots(figsize=(16, 10))
-        ax.set_title("[{symbol}] - Loss [Model: {model_name}][LB: {lb:d}][F: {fs:d}]]".format(
-            symbol=symbol_name, model_name=model_name, lb=look_back, fs=foresight))
+        ax.set_title("[{symbol_name}][{feature}] - Loss [Network: {network_name}][LB: {lb:d}][LF: {lf:d}]]".format(
+            symbol_name=symbol_name, feature=feature, network_name=network_name, lb=look_back, lf=look_front))
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
 
         # plot loss
-        loss_min = min(network.history["loss"])
-        val_loss_min = min(network.history["val_loss"])
-        ax.plot(network.history["loss"], label="training loss ({:.8f})".format(loss_min), zorder=2)
-        ax.plot(network.history["val_loss"], label="validation loss ({:.8f})".format(val_loss_min), zorder=2)
+        loss_min = min(history.history["loss"])
+        val_loss_min = min(history.history["val_loss"])
+        ax.plot(history.history["loss"], label="Training Loss ({:.8f})".format(loss_min), zorder=2)
+        ax.plot(history.history["val_loss"], label="Validation Loss ({:.8f})".format(val_loss_min), zorder=2)
         plt.grid(color="lightgray", alpha=0.5, zorder=1)
         plt.legend()
 
         # save chart
         fig.tight_layout()
-        output_file = os.path.join(self.chart_dir, "loss-[{model_name}]-[{symbol_name}]-[{lb:d}-{fs:d}].png".format(
-            model_name=model_name, symbol_name=symbol_name, lb=look_back, fs=foresight))
+        output_file = os.path.join(
+            self.chart_dir, "loss-[{network_name}]-[{symbol_name}]-[{feature}]-[{lb:d}-{lf:d}].png".format(
+                network_name=network_name, symbol_name=symbol_name, feature=feature, lb=look_back, lf=look_front))
         plt.savefig(output_file.lower(), format="png", bbox_inches="tight", transparent=False)
         plt.close(fig)
 
     def plot_prediction(
-            self, y_pred, y_test, scaler, model_name, symbol_name, look_back, foresight, xlabel="Date", ylabel="Price"):
+            self, y_pred, y_test, scaler_test, network_name, symbol_name, feature, look_back, look_front,
+            xlabel="Step", ylabel="Price"):
         # generate chart
         fig, ax = plt.subplots(figsize=(16, 10))
-        ax.set_title("[{symbol}] - Prediction [Model: {model_name}][LB: {lb:d}][F: {fs:d}]]".format(
-            symbol=symbol_name, model_name=model_name, lb=look_back, fs=foresight))
+        ax.set_title("[{symbol_name}][{feature}] - Prediction [Network: {network_name}][LB: {lb:d}][LF: {lf:d}]]".format(
+            symbol_name=symbol_name, feature=feature, network_name=network_name, lb=look_back, lf=look_front))
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
 
-        # plot actual vs prediction
-        actual = scaler.inverse_transform(y_test.reshape(-1, 1))
-        predicted = scaler.inverse_transform(y_pred.reshape(-1, 1))
+        # plot actual vs predicted values
+        actual = scaler_test.inverse_transform(y_test.reshape(-1, 1))
+        predicted = scaler_test.inverse_transform(y_pred.reshape(-1, 1))
         last_actual = actual[-1][0]
-        last_predicted = predicted[-1][0]
-        ax.plot(actual, label="Actual ({:.4f})".format(last_actual),
-                color="green", zorder=2)
-        ax.plot(predicted, label="Predicted ({:.4f})".format(last_predicted),
-                color="blue", linestyle="dotted", zorder=2)
-        # ax.xaxis.set_major_locator(mdates.MonthLocator())
+        last_pred = predicted[-1][0]
+        ax.plot(actual, label="Actual ({:.4f})".format(last_actual), color="green", zorder=2)
+        ax.plot(predicted, label="Predicted ({:.4f})".format(last_pred), color="blue", linestyle="dotted", zorder=2)
         plt.grid(color="lightgray", alpha=0.5, zorder=1)
         plt.legend()
 
         # save chart
         fig.tight_layout()
-        output_file = os.path.join(self.chart_dir, "pred-[{model_name}]-[{symbol_name}]-[{lb:d}-{fs:d}].png".format(
-            model_name=model_name, symbol_name=symbol_name, lb=look_back, fs=foresight))
+        output_file = os.path.join(
+            self.chart_dir, "pred-[{network_name}]-[{symbol_name}]-[{feature}]-[{lb:d}-{lf:d}].png".format(
+                network_name=network_name, symbol_name=symbol_name, feature=feature, lb=look_back, lf=look_front))
+        plt.savefig(output_file.lower(), format="png", bbox_inches="tight", transparent=False)
+        plt.close(fig)
+
+    def plot_pc(
+            self, pc_pred, pc_test, network_name, symbol_name, feature, look_back, look_front,
+            xlabel="Step", ylabel="% Change"):
+        # generate chart
+        fig, ax = plt.subplots(figsize=(16, 10))
+        ax.set_title("[{symbol_name}][{feature}] - % Change [Network: {network_name}][LB: {lb:d}][LF: {lf:d}]]".format(
+            symbol_name=symbol_name, feature=feature, network_name=network_name, lb=look_back, lf=look_front))
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+
+        # plot actual vs predicted percentage change
+        last_test = pc_test[-1]
+        last_pred = pc_pred[-1]
+        ax.plot(pc_test, label="Actual ({:.4f})".format(last_test), color="green", zorder=2)
+        ax.plot(pc_pred, label="Predicted ({:.4f})".format(last_pred), color="blue", linestyle="dotted", zorder=2)
+        plt.grid(color="lightgray", alpha=0.5, zorder=1)
+        plt.legend()
+
+        # save chart
+        fig.tight_layout()
+        output_file = os.path.join(
+            self.chart_dir, "pred-[{network_name}]-[{symbol_name}]-[{feature}]-[{lb:d}-{lf:d}].png".format(
+                network_name=network_name, symbol_name=symbol_name, feature=feature, lb=look_back, lf=look_front))
         plt.savefig(output_file.lower(), format="png", bbox_inches="tight", transparent=False)
         plt.close(fig)

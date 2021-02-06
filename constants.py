@@ -1,10 +1,18 @@
+# value constants
+CALENDAR_DAYS = 365
+TRADING_DAYS_YEAR = 252
+TRADING_DAYS_MONTH = 22
+
 # directory constants
-DATA_DIR = "data"
 LOG_DIR = "log"
-DB_DIR = "db"
-CHART_TA_DIR = "chart-technical"
-CHART_PA_DIR = "chart-prediction"
+DATA_DIR = "data"
 MODEL_DIR = "model"
+DB_SYMBOL_DIR = "db"
+DB_PREDICT_DIR = "predict"
+DB_PERF_DIR = "perf"
+CHART_TRAIN_DIR = "chart-train"
+CHART_PREDICT_DIR = "chart-predict"
+CHART_TA_DIR = "chart-technical"
 
 # column constants
 CLOSE = "u_close"
@@ -38,3 +46,94 @@ RSI_AVG_GAIN = "u_rsi_avg_gain"
 RSI_AVG_LOSS = "u_rsi_avg_loss"
 RSI_RS = "u_rsi_rs"
 RSI = "u_rsi"
+SHARPE = "u_sharpe"
+TRAILING_RETURN = "u_trailing_return"
+ANNUALIZED_RETURN = "u_annualized_return"
+MAX_DD = "u_mdd"
+
+# index symbols
+#   ^SPX/^GSPC = S&P500 = cap-weighted index of the 500 largest U.S. publicly traded companies
+#   ^TWSE = cap-weighted index of all listed common shares traded on the Taiwan Stock Exchange
+#   ^KOSPI = cap-weighted index of all listed common shares traded on the Korea Exchange
+#   ^NKX = price-weighted index of top 225 blue-chip companies traded on the Tokyo Stock Exchange
+#   ^HSI = cap-weighted index of the largest companies on the Hong Kong Exchange
+#   ^STI = cap-weighted index of top 30 companies on the Singapore Exchange
+#   ^SHC = cap-weighted index of all stocks (A-shares and B-shares) traded on the Shanghai Stock Exchange
+#   ^SHBS = cap-weighted index of all B-shares traded on the Shanghai Stock Exchange
+SYMBOLS_INDICES_NON_US = ("^TWSE", "^KOSPI", "^NKX", "^HSI", "^STI", "^SHC", "^SHBS")
+SYMBOLS_INDICES = ("^GSPC", "^IXIC", "^NDX", "^DJI", "^RUT", "^VIX")
+
+# stock symbols
+SYMBOLS_STOCKS = (
+    "AAPL", "AMZN", "FB", "GOOGL", "GOOG", "MSFT", "NFLX", "TSLA", "CRM", "WDAY",
+    "BABA", "TCEHY", "NIO", "NOW", "SNOW", "PLTR",
+    "SQ", "TWOU", "Z", "TREE", "WORK", "TDOC", "PSTG", "XLNX", "VCYT", "SPLK", "PINS", "TWLO", "SE", "TSM", "ICE",
+    "DOCU", "NVDA", "ONVO", "NVTA", "CRSP", "ROKU", "ILMN", "CGEN", "EDIT", "PYPL", "MELI", "DE", "PRLB", "JD", "FLIR",
+    "ARCT", "PACB", "TWST", "CDNA", "IOVA", "EXAS", "CLLS", "SPOT", "GBTC",
+    "SVFAU", "PSTH", "IPOD", "IPOE", "IPOF", "SVAC"
+#   "SVFA", "SVFAW", "LDHAU", "SVFBU", "SVFCU"
+)
+# ETF symbols
+SYMBOLS_ETFS = (
+    "SCHB", "SCHX", "SCHG", "SCHA", "SCHF", "SCHE", "SCHD", "SCHH", "SCHZ",
+    "VTI", "VOO", "VTV", "VEA", "VWO", "VGT", "QQQ", "SPY", "GLD", "IWF", "AGG",
+    "ARKK", "ARKW", "ARKF", "ARKG", "ARKQ",
+    "SOXL", "TECL", "TQQQ",
+    "FXI", "ROM", "IPO",
+    "XLY", "XLK", "XLRE", "XLC", "XLF", "XLB", "XLI", "XLE", "XLU", "XLV", "XLP"
+)
+
+# settings for model training
+# < 100 hidden nodes = 500 epochs
+# 100~140 hidden nodes = 200 epochs
+# > 140 hidden nodes = 100 epochs
+TRAIN_SETTINGS = {
+    "^SPX": {"epochs": 100, "steps_in": 20, "steps_out": 1},
+    "^NDQ": {"epochs": 100, "steps_in": 20, "steps_out": 1},
+    "^NDX": {"epochs": 100, "steps_in": 20, "steps_out": 1},
+    "^DJI": {"epochs": 100, "steps_in": 20, "steps_out": 1},
+    "^TWSE": {"epochs": 200, "steps_in": 20, "steps_out": 1},
+    "^KOSPI": {"epochs": 100, "steps_in": 20, "steps_out": 1},
+    "^NKX": {"epochs": 100, "steps_in": 20, "steps_out": 1},
+    "^HSI": {"epochs": 100, "steps_in": 20, "steps_out": 1},
+    "^STI": {"epochs": 200, "steps_in": 20, "steps_out": 1},
+    "^SHC": {"epochs": 200, "steps_in": 20, "steps_out": 1},
+    "^SHBS": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+
+    "AAPL": {"epochs": 100, "steps_in": 20, "steps_out": 1},
+    "AMZN": {"epochs": 200, "steps_in": 20, "steps_out": 1},
+    "FB": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "GOOGL": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "GOOG": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "MSFT": {"epochs": 100, "steps_in": 20, "steps_out": 1},
+    "NFLX": {"epochs": 200, "steps_in": 20, "steps_out": 1},
+    "TSLA": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "CRM": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "WDAY": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "BABA": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "TCTZF": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "NIO": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "NOW": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "SNOW": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "PLTR": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+
+    "SCHB": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "SCHX": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "SCHG": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "SCHA": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "SCHF": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "SCHE": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "SCHD": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "SCHH": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "SCHZ": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "VTI": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "VOO": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "VTV": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "VEA": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "VWO": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "QQQ": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "SPY": {"epochs": 200, "steps_in": 20, "steps_out": 1},
+    "GLD": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "IWF": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+    "AGG": {"epochs": 500, "steps_in": 20, "steps_out": 1},
+}

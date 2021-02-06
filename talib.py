@@ -7,9 +7,13 @@ Library of functions to compute various technical indicators.
 """
 
 import logging
+import numpy as np
 import pandas as pd
 import math as math
 import statistics as stats
+import datetime
+
+import constants as c
 
 # create logger
 logger = logging.getLogger("algo-trader")
@@ -435,13 +439,14 @@ def compute_rsi(df, column_source, column_target_avg_gain, column_target_avg_los
 
 def compute_change(df, column_source, column_target_change, column_target_change_pc, time_periods):
     """
-    Compute the change and percentage change of the values in the source column for the specified period in days.
+    Compute the change and percentage change of the values in the source column for the specified period in (trading)
+    days.
 
     :param df: dataframe (sorted in ascending time order)
     :param column_source: name of source column in dataframe with values to compute change (e.g. close price)
     :param column_target_change: name of target column in dataframe for change to add to dataframe
     :param column_target_change_pc: name of target column in dataframe for change pc to add to dataframe
-    :param time_periods: list of time periods in days
+    :param time_periods: list of time periods in (trading) days
     :return: modified dataframe
     """
 
@@ -449,17 +454,15 @@ def compute_change(df, column_source, column_target_change, column_target_change
     for time_period in time_periods:
         key_change = column_target_change + "-{:d}".format(time_period)
         key_change_pc = column_target_change_pc + "-{:d}".format(time_period)
-        if time_period == 1:
-            change_series = df[column_source].diff(time_period)
-            change_pc_series = df[column_source].pct_change(time_period)
-            df[key_change] = change_series
-            df[key_change_pc] = change_pc_series
-        else:
-            df2 = df[column_source].asfreq("D", method="ffill")
-            change_series = df2.diff(time_period)
-            change_pc_series = df2.pct_change(time_period)
-            df[key_change] = change_series
-            df[key_change_pc] = change_pc_series
+        #df2 = df[column_source].asfreq("D", method="ffill")
+        #change_series = df2.diff(time_period)
+        #change_pc_series = df2.pct_change(time_period)
+        #df[key_change] = change_series
+        #df[key_change_pc] = change_pc_series
+        change_series = df[column_source].diff(time_period)
+        change_pc_series = df[column_source].pct_change(time_period)
+        df[key_change] = change_series
+        df[key_change_pc] = change_pc_series
 
     return df
 
@@ -551,3 +554,329 @@ def compute_change_pc_below(df, column_source1, column_source2, column_target, c
     df = pd.concat([df, pc_below.rename(column_target_pc)], axis=1)
 
     return df
+
+
+def compute_sharpe(df, column_source, column_target, N=252):
+    """
+    Compute the sharpe ratio of the (e.g. daily) return values in the source column.
+
+    :param df: dataframe (sorted in ascending time order)
+    :param column_source: name of source column in dataframe with values to compute sharpe ratio (e.g. daily returns)
+    :param column_target: name of target column in dataframe for sharpe ratio to add to dataframe
+    :param N: number of trading periods (e.g. 252 = daily, 12 = monthly)
+    :return: modified dataframe
+    """
+
+    # compute the sharpe ratio and add result back to dataframe
+    return_series = df[column_source]
+    df[column_target] = np.sqrt(N) * return_series.mean() / return_series.std()
+    return df
+
+
+def compute_cumulative_total_return(df, column_price):
+    """
+    Cumulative return on an investment is the aggregate amount that the investment has gained or lost over time,
+    independent of the amount of time involved.
+
+    cumulative total return = (price_end - price_start) / price_start = (price_end/price_start) - 1
+
+    :param df: dataframe (sorted in ascending time order)
+    :param column_price: name of source column in dataframe with price values (adjusted for splits and dividends) to
+                         compute cumulative total return
+    :return: cumulative total return
+    """
+
+    # compute cumulative total return
+    price_start = df[column_price][0]
+    price_end = df[column_price][-1]
+    cumulative_return = (price_end - price_start)/price_start
+    return cumulative_return
+
+
+def compute_annualized_total_return_over_years(df, column_price, years):
+    """
+    Computed the annualized total return over the specified number of years.
+
+    This is equivalent to Compound Annual Growth Rate (CAGR).
+
+    Note: If the period is less than one year, it is best not to use annualized total return as it could result in a
+    very large (positive or negative) number that is not meaningful.
+
+    :param df: dataframe (sorted in ascending time order)
+    :param column_price: name of source column in dataframe with price values (adjusted for splits and dividends) to
+                         compute annualized total return
+    :param years: time period in years (e.g. 1 = 1 year, 2 = 2 years, 2.5 = 1 year and 6 months, etc.)
+    :return: annualized total return over years
+    """
+
+    # compute cumulative total return
+    total_return = compute_cumulative_total_return(df, column_price)
+
+    # compute annualized total returns over months
+    annualized_total_return = ((1 + total_return)**(1/years)) - 1
+
+    return annualized_total_return
+
+
+def compute_annualized_total_return_over_months(df, column_price, months):
+    """
+    Computed the annualized total return over the specified number of months.
+
+    This is equivalent to Compound Annual Growth Rate (CAGR).
+
+    Note: If the period is less than one year, it is best not to use annualized total return as it could result in a
+    very large (positive or negative) number that is not meaningful.
+
+    :param df: dataframe (sorted in ascending time order)
+    :param column_price: name of source column in dataframe with price values (adjusted for splits and dividends) to
+                         compute annualized total return
+    :param months: time period in months (e.g. 1 = 1 month, 2 = 2 months, 2.5 = 1 month and ~15 days, etc.)
+    :return: annualized total return over months
+    """
+
+    # calculate cumulative total return
+    total_return = compute_cumulative_total_return(df, column_price)
+
+    # calculate annualized total returns over months
+    annualized_total_return = ((1 + total_return)**(12/months)) - 1
+
+    return annualized_total_return
+
+
+def compute_annualized_total_return_over_calendar_days(df, column_price):
+    """
+    Computed the annualized total return over the provided number of calendar days.
+
+    This is equivalent to Compound Annual Growth Rate (CAGR).
+
+    Note: Using days (versus years or months) provides the most precise form of annualized return calculation.
+
+    Note: If the period is less than one year, it is best not to use annualized total return as it could result in a
+    very large (positive or negative) number that is not meaningful.
+
+    :param df: dataframe (sorted in ascending time order)
+    :param column_price: name of source column in dataframe with price values (adjusted for splits and dividends) to
+                         compute annualized total return
+    :return: annualized total return over days
+    """
+
+    # calculate cumulative total return
+    total_return = compute_cumulative_total_return(df, column_price)
+
+    # fill in missing calendar days
+    index_filled = pd.date_range(min(df.index), max(df.index))
+    df_filled = df.reindex(index_filled, method="ffill")
+
+    # number of calendar days in data
+    # note: dataframe includes one day before the desired range; for example, if we want to get the annualized total
+    # return from 4/1/2000 to 3/31/2002, the dataframe will contain data from 3/31/2000 to 3/31/2002; as a result,
+    # the number of calendar days is (len(df) - 1)
+    calendar_days = len(df_filled) - 1
+
+    # calculate annualized total returns over days
+    annualized_total_return = ((1 + total_return)**(c.CALENDAR_DAYS/calendar_days)) - 1
+
+    return annualized_total_return
+
+
+def compute_annualized_total_return_over_trading_days(df, column_price):
+    """
+    Computed the (trailing) annualized total return over the provided number of trading days.
+
+    This is equivalent to Compound Annual Growth Rate (CAGR).
+
+    Note: Using days (versus years or months) provides the most precise form of annualized return calculation.
+
+    Note: If the period is less than one year, it is best not to use annualized total return as it could result in a
+    very large (positive or negative) number that is not meaningful.
+
+    :param df: dataframe (sorted in ascending time order)
+    :param column_price: name of source column in dataframe with price values (adjusted for splits and dividends) to
+                         compute annualized total return
+    :return: annualized total return over days
+    """
+
+    # calculate cumulative total return
+    total_return = compute_cumulative_total_return(df, column_price)
+
+    # number of trading days in data
+    # note: dataframe includes one day before the desired range; for example, if we want to get the annualized total
+    # return from 4/1/2000 to 3/31/2002, the dataframe will contain data from 3/31/2000 to 3/31/2002; as a result,
+    # the number of trading days is (len(df) - 1)
+    trading_days = len(df) - 1
+
+    # calculate annualized total returns over number of trading days
+    annualized_total_return = ((1 + total_return)**(c.TRADING_DAYS_YEAR/trading_days)) - 1
+
+    return annualized_total_return
+
+
+def compute_trailing_returns(df, symbol):
+
+    dict_returns = {"symbol": symbol}
+
+    # compute total return (trailing 1 month)
+    end = df.index[-1]
+    start = end - pd.DateOffset(months=1)
+    dict_returns[c.TRAILING_RETURN + "-1m"] = compute_cumulative_total_return(df.loc[start:end], c.CLOSE)
+
+    # compute total return (trailing 3 month)
+    end = df.index[-1]
+    start = end - pd.DateOffset(months=3)
+    dict_returns[c.TRAILING_RETURN + "-3m"] = compute_cumulative_total_return(df.loc[start:end], c.CLOSE)
+
+    # compute total return for YTD
+    end = df.index[-1]
+    start = end - pd.offsets.YearBegin() - pd.offsets.Day(1)
+    dict_returns[c.TRAILING_RETURN + "-ytd"] = compute_cumulative_total_return(df.loc[start:end], c.CLOSE)
+
+    # compute annualized total returns (trailing 1 year)
+    end = df.index[-1]
+    start = end - pd.DateOffset(years=1)
+    dict_returns[c.TRAILING_RETURN + "-1y"] = compute_annualized_total_return_over_trading_days(df.loc[start:end], c.CLOSE)
+
+    # compute annualized total returns (trailing 3 years)
+    end = df.index[-1]
+    start = end - pd.DateOffset(years=3)
+    dict_returns[c.TRAILING_RETURN + "-3y"] = compute_annualized_total_return_over_trading_days(df.loc[start:end], c.CLOSE)
+
+    # compute annualized total returns (trailing 5 years)
+    end = df.index[-1]
+    start = end - pd.DateOffset(years=5)
+    dict_returns[c.TRAILING_RETURN + "-5y"] = compute_annualized_total_return_over_trading_days(df.loc[start:end], c.CLOSE)
+
+    # compute annualized total returns (trailing 10 years)
+    end = df.index[-1]
+    start = end - pd.DateOffset(years=10)
+    dict_returns[c.TRAILING_RETURN + "-10y"] = compute_annualized_total_return_over_trading_days(df.loc[start:end], c.CLOSE)
+
+    # add computed returns to dataframe
+    df_returns = pd.DataFrame()
+    df_returns = df_returns.append(dict_returns, ignore_index=True)
+
+    return df_returns
+
+
+def compute_yearly_total_returns(df, symbol):
+    # compute cumulative total return
+    dict_returns = {"symbol": symbol}
+
+    # compute annualized total returns for past 20 years, starting with previous year
+    years_available = np.unique(df.index.year)
+    if years_available.size > 1:
+        years_previous_end = years_available[-22:-1]
+        years_previous_start = years_previous_end[:-1]
+        year_end = years_previous_end[-1]
+        for year_start in reversed(years_previous_start):
+            start = "{:d}-12-31".format(year_start)
+            end = "{:d}-12-31".format(year_end)
+            dict_returns[c.ANNUALIZED_RETURN + "-{:d}".format(year_end)] = compute_annualized_total_return_over_trading_days(
+                df.loc[start:end], c.CLOSE)
+            year_end = year_start
+
+    # add computed returns to dataframe
+    df_returns = pd.DataFrame()
+    df_returns = df_returns.append(dict_returns, ignore_index=True)
+
+    return df_returns
+
+
+def compute_max_drawdowns(df, column_source, column_target):
+    daily_pc_series = df[column_source].pct_change()
+
+    # compute wealth index starting with $1000
+    wealth_index_series = 1000 * (1 + daily_pc_series).cumprod()
+
+    # compute previous peaks
+    previous_peaks_series = wealth_index_series.cummax()
+
+    # compute drawdowns
+    drawdowns_series = (wealth_index_series - previous_peaks_series)/previous_peaks_series
+
+    # add computed results back to dataframe
+    df = pd.concat([df, drawdowns_series.rename(column_target)], axis=1)
+
+    return df
+
+
+def compute_max_drawdown_by_year(df, symbol):
+
+    # get previously calculated max drawdowns
+    mdd_series = df[c.MAX_DD]
+
+    # find all-time max drawdown
+    dict_mdd = {"symbol": symbol, c.MAX_DD + "-max": mdd_series.min()}
+
+    # compute YTD max drawdown
+    end = df.index[-1]
+    start = end - pd.offsets.YearBegin()
+    dict_mdd[c.MAX_DD + "-ytd"] = mdd_series.loc[start:end].min()
+
+    # find max drawdown for past 20 years, starting with previous year
+    years_available = np.unique(df.index.year)
+    years_previous = years_available[-21:-1]
+    for year in reversed(years_previous):
+        start = "{:d}-01-01".format(year)
+        end = "{:d}-12-31".format(year)
+        dict_mdd[c.MAX_DD + "-{:d}".format(year)] = mdd_series.loc[start:end].min()
+
+    # add computed returns to dataframe
+    df_mdd_by_year = pd.DataFrame()
+    df_mdd_by_year = df_mdd_by_year.append(dict_mdd, ignore_index=True)
+
+    return df_mdd_by_year
+
+
+def compute_all_ta(df):
+    # add previous close
+    df = copy_column_shift(df, c.CLOSE, c.PREV_CLOSE, 1)
+    # compute change and percentage change of closing price
+    df = compute_change(df, c.CLOSE, c.CHANGE, c.CHANGE_PC, (1,))
+    # compute daily change between open price and previous closing price
+    df = compute_daily_change_between_current_and_previous(df, c.OPEN, c.CLOSE, c.OPEN_PREV_CLOSE, c.OPEN_PREV_CLOSE_PC)
+    # compute 52 week range (low~high)
+    df = compute_52_week_range(df, c.LOW, c.HIGH, c.R52_WK_LOW, c.R52_WK_HIGH)
+    # compute change and percentage change of close price above the 52 week low price
+    df = compute_change_pc_above(df, c.CLOSE, c.R52_WK_LOW, c.CLOSE_ABOVE_52_WK_LOW, c.CLOSE_ABOVE_52_WK_LOW_PC)
+    # compute change and percentage change of close price below the 52 week high price
+    df = compute_change_pc_below(df, c.CLOSE, c.R52_WK_HIGH, c.CLOSE_BELOW_52_WK_HIGH, c.CLOSE_BELOW_52_WK_HIGH_PC)
+    # compute SMA of close price
+    df = compute_sma(df, c.CLOSE, c.SMA, (50, 100, 200))
+    # compute EMA of close price
+    df = compute_ema(df, c.CLOSE, c.EMA, (12, 26, 50, 200))
+    # compute golden/death crosses for SMA
+    df = compute_ma_cross(df, c.SMA, c.SMA_GOLDEN_CROSS, c.SMA_DEATH_CROSS, 50, 200)
+    # compute golden/death crosses for EMA
+    df = compute_ma_cross(df, c.EMA, c.EMA_GOLDEN_CROSS, c.EMA_DEATH_CROSS, 12, 26)
+    df = compute_ma_cross(df, c.EMA, c.EMA_GOLDEN_CROSS, c.EMA_DEATH_CROSS, 50, 200)
+    # compute average daily trading volume
+    df = compute_sma(df, c.VOLUME, c.ADTV, (30,))
+    # compute BB of close price with SMA period of 20 and standard deviation of 2
+    df = compute_bb(df, c.CLOSE, c.BB, 20, 2)
+    # compute MACD of close price
+    df = compute_macd(df, c.CLOSE, c.EMA, c.MACD, c.MACD_SIGNAL, c.MACD_HISTOGRAM, 12, 26, 9)
+    # compute RSI of close price
+    df = compute_rsi(df, c.CLOSE, c.RSI_AVG_GAIN, c.RSI_AVG_LOSS, c.RSI, (7, 14, 21))
+    # compute sharpe ratio
+    df = compute_sharpe(df, "u_change_pc-1", c.SHARPE)
+    # compute max drawdowns
+    df = compute_max_drawdowns(df, c.CLOSE, c.MAX_DD)
+
+    return df
+
+
+def compute_all_perf(df, symbol_name):
+    # compute trailing (annualized) returns
+    df_trailing_returns = compute_trailing_returns(df, symbol_name)
+
+    # compute yearly total returns
+    df_yearly_total_returns = compute_yearly_total_returns(df, symbol_name)
+
+    # compute max drawdown by year
+    df_mdd = compute_max_drawdown_by_year(df, symbol_name)
+
+    # merge performance data
+    df_perf = pd.merge(df_trailing_returns, df_yearly_total_returns, on="symbol")
+    df_perf = pd.merge(df_perf, df_mdd, on="symbol")
+
+    return df_perf
